@@ -1,5 +1,9 @@
 # ClearCheckout submission build
 
+## Requested multimodal extension
+
+The user requested SAM 3.1, Muse Voice Transcribe, and Muse Image 1.0 on Nov 4 after live Muse Spark Contributor verification. Add voice navigation with transcript review and a strict command allowlist, never voice payment confirmation. Use Muse Image for one reusable demo product scene and SAM to locate a selected product and offer a keyboard-accessible magnified view. Generated art must be labeled as illustrative, and SAM must not be represented as recognizing arbitrary checkout semantics. No arbitrary page screenshots or sensitive field uploads. Extend the existing durable $5 allowance across all model calls. Preserve the existing runnable journey and manual payment guard. A single owner integrates these features because they share API routes, UI state, and the spending ledger.
+
 The user has five hours as of the Nov 4 build kickoff. The goal is a usable submission product for blind and low-vision shoppers. This document supersedes the scope of the earlier five-hour demo plan at `/data/workspace/hackathons/clearcheckout-5h-plan.md`.
 
 ## Launch journey
