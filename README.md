@@ -60,7 +60,7 @@ This is a local submission, not a production security or universal accessibility
 
 ## Optional official Meta AI order explanations
 
-The demo clarity panel includes **Explain with Meta AI**, using the official Meta Model API and `muse-spark-1.3-contributor`. Copy `.env.example` to `.env` and privately set `MODEL_API_KEY`, or set `MODEL_API_KEY_FILE` to a private UTF-8 file. `server/index.js` loads the working directory's gitignored `.env` at startup with Node's `process.loadEnvFile`; existing environment variables take precedence. Restart after changing configuration. The key stays on the server. Never use a `VITE_` key variable.
+The demo clarity panel includes **Explain with Meta AI**, using the official Meta Model API and `muse-spark-1.3-contributor`. Copy `.env.example` to `.env` and privately set `MODEL_API_KEY`, or set `MODEL_API_KEY_FILE` to a private UTF-8 file. `server/index.ts` loads the working directory's gitignored `.env` at startup with Node's `process.loadEnvFile`; existing environment variables take precedence. Restart after changing configuration. The key stays on the server. Never use a `VITE_` key variable.
 
 Before asking Meta, shoppers approve sharing the demo items, authoritative prices, delivery, checkout state, revision, and guidance detail. Contributor prompts and responses may be used by Meta for training. No account email, password, session token, arbitrary customer prompt, field values, or screenshots are forwarded. Local control repairs continue to run without AI. AI text is advisory, rendered as React text, and cannot execute tools, modify orders, or confirm payment. The trusted app total remains separately visible.
 

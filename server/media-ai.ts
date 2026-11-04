@@ -1,12 +1,16 @@
+import {z} from 'zod';
+import {fail,json,type Db,type ProviderOptions} from './contracts.js';
+const boxSchema=z.object({id:z.string(),x1:z.number(),y1:z.number(),x2:z.number(),y2:z.number(),w:z.number(),h:z.number()});
+const boxesSchema=z.object({boxes:z.array(boxSchema)});
+const imageSchema=z.object({data:z.tuple([z.object({b64_json:z.string()})]).rest(z.unknown())});
 import {mkdirSync,existsSync,readFileSync,writeFileSync,renameSync} from 'node:fs';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {metaConfig} from './meta-ai.js';
 import {createLedger} from './ai-ledger.js';
-const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
-export function validateWav(b) {
+export function validateWav(b:Buffer) {
   if(b.length<44||b.length>500000||b.toString('ascii',0,4)!=='RIFF'||b.toString('ascii',8,12)!=='WAVE'||b.readUInt32LE(4)!==b.length-8) fail(400,'Choose a mono PCM16 WAV at 16 or 24 kHz, up to 10 seconds.');
-  let format,bytes;
+  let format:{pcm:number;channels:number;rate:number;byteRate:number;align:number;bits:number}|undefined,bytes:number|undefined;
   for(let i=12;i+8<=b.length;) {
     const n=b.readUInt32LE(i+4),end=i+8+n;
     if(end>b.length) fail(400,'Invalid WAV file.');
@@ -18,7 +22,7 @@ export function validateWav(b) {
   if(!format||format.pcm!==1||format.channels!==1||![16000,24000].includes(format.rate)||format.bits!==16||format.align!==2||format.byteRate!==format.rate*2||!bytes||bytes%2||bytes/(format.rate*2)>10) fail(400,'Choose a mono PCM16 WAV at 16 or 24 kHz, up to 10 seconds.');
   return bytes/(format.rate*2);
 }
-export function parseBoxes(text) {
+export function parseBoxes(text:string) {
   if(!text.trim()) return [];
   if(!text.startsWith('<0f>')) throw Error('Invalid frame');
   const boxes=[];
@@ -26,23 +30,23 @@ export function parseBoxes(text) {
   const records=[...text.matchAll(pattern)];
   if('<0f>'+records.map(m=>m[0]).join(',')!==text.trim()) throw Error('Invalid records');
   for(const match of records) {
-    const f=Object.fromEntries(match[2].split(';').map(v=>v.split('=')));
+    const f=Object.fromEntries((match[2] ?? '').split(';').map(v=>v.split('=')));
     const values=['x1','y1','x2','y2','w','h'].map(k=>Number(f[k]));
-    const [x1,y1,x2,y2,w,h]=values;
+    const [x1,y1,x2,y2,w,h]=z.tuple([z.number(),z.number(),z.number(),z.number(),z.number(),z.number()]).parse(values);
     if(!values.every(Number.isInteger)||w<=0||h<=0||x1<0||y1<0||x2<=x1||y2<=y1||x2>w||y2>h) throw Error('Invalid box');
-    boxes.push({id:match[1],x1,y1,x2,y2,w,h});
+    boxes.push({id:match[1] ?? '',x1,y1,x2,y2,w,h});
   }
   if(!boxes.length) throw Error('Invalid segmentation');
   return boxes;
 }
-export function createMedia(db,{config=metaConfig(),transport=fetch,timeoutMs=90000,dataDir='data/media'}={}) {
+export function createMedia(db:Db,{config=metaConfig(),transport=fetch,timeoutMs=90000,dataDir='data/media'}:ProviderOptions & {dataDir?:string}={}) {
   const reserve=createLedger(db,config),scenePath=path.join(dataDir,'scene.png');
   let generating=false;
-  async function call(user,cacheKey,endpoint,body,headers={},validate=result=>result) {
+  async function call<T>(user:string,cacheKey:string,endpoint:string,body:string|FormData,headers:Record<string,string>,validate:(result:unknown)=>T):Promise<T> {
     if(!config.key) fail(503,'Meta media models are not configured.');
     const r=reserve.immediate(user,cacheKey);
-    if(r.cached) {
-      try {return validate(JSON.parse(r.cached));}
+    if('cached' in r) {
+      try {return validate(json(r.cached));}
       catch {
         db.prepare("UPDATE ai_calls SET status='failed' WHERE user_id=? AND cache_key=? AND status='complete'").run(user,cacheKey);
         fail(502,'The saved Meta result was invalid. Try again after the request limit clears.');
@@ -53,30 +57,31 @@ export function createMedia(db,{config=metaConfig(),transport=fetch,timeoutMs=90
       if(!response.ok) throw Error('Provider error');
       const raw=await response.text();
       if(raw.length>16000000) throw Error('Oversized response');
-      const result=validate(endpoint==='responses'?parseStream(raw):JSON.parse(raw));
+      const result=validate(endpoint==='responses'?parseStream(raw):json(raw));
       db.prepare("UPDATE ai_calls SET status='complete',text=? WHERE id=?").run(endpoint.startsWith('asr/')?null:JSON.stringify(result),r.id);
       return result;
     } catch {db.prepare("UPDATE ai_calls SET status='failed' WHERE id=?").run(r.id);fail(502,'Meta media request failed. No automatic retry was made.');}
   }
-  function parseStream(raw) {
+  function parseStream(raw:string) {
     let text='',complete=false;
     for(const line of raw.split('\n')) if(line.startsWith('data:')) {
       const s=line.slice(5).trim();if(s==='[DONE]') continue;
-      const event=JSON.parse(s);
-      if(event.type==='response.output_text.delta') text+=event.delta;
+      const event=z.object({type:z.string(),delta:z.string().optional()}).parse(json(s));
+      if(event.type==='response.output_text.delta') text+=event.delta ?? '';
       if(event.type==='response.completed') complete=true;
     }
     if(!complete) throw Error('Incomplete stream');
     return {boxes:parseBoxes(text)};
   }
-  function validateImage(result) {
-    const b=Buffer.from(result?.data?.[0]?.b64_json||'','base64');
+  function validateImage(input:unknown) {
+    const result=imageSchema.parse(input);
+    const b=Buffer.from(result.data[0].b64_json,'base64');
     if(b.length<24||b.length>10000000||b.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||b.readUInt32BE(16)<1||b.readUInt32BE(20)<1||b.readUInt32BE(16)>4096||b.readUInt32BE(20)>4096) throw Error('Invalid image');
     return result;
   }
   return {
     scene(){return existsSync(scenePath)?readFileSync(scenePath):null;},
-    async generate(user) {
+    async generate(user:string) {
       if(existsSync(scenePath)) return {ready:true,cached:true};
       if(generating) fail(409,'Scene generation is already running.');
       generating=true;
@@ -87,21 +92,22 @@ export function createMedia(db,{config=metaConfig(),transport=fetch,timeoutMs=90
         return {ready:true,cached:false};
       }finally {generating=false;}
     },
-    async locate(user,object) {
-      if(!['mug','tea box'].includes(object)) fail(400,'Choose mug or tea box.');
+    async locate(user:string,object:unknown) {
+      if(object!=='mug' && object!=='tea box') fail(400,'Choose mug or tea box.');
       if(!existsSync(scenePath)) fail(409,'Generate the illustrative scene first.');
       const image=readFileSync(scenePath);
-      const result=await call(user,`media-box-v1-${object}`,'responses',JSON.stringify({model:'sam-3.1',stream:true,input:[{type:'message',role:'user',content:[{type:'input_text',text:object},{type:'input_image',image_url:`data:image/png;base64,${image.toString('base64')}`}]}]}),{'Content-Type':'application/json',Accept:'text/event-stream'},result=>{
-        if(!Array.isArray(result?.boxes)||result.boxes.some(b=>b.w!==image.readUInt32BE(16)||b.h!==image.readUInt32BE(20))) throw Error('Invalid segmentation dimensions');
+      const result=await call(user,`media-box-v1-${object}`,'responses',JSON.stringify({model:'sam-3.1',stream:true,input:[{type:'message',role:'user',content:[{type:'input_text',text:object},{type:'input_image',image_url:`data:image/png;base64,${image.toString('base64')}`}]}]}),{'Content-Type':'application/json',Accept:'text/event-stream'},input=>{
+        const result=boxesSchema.parse(input);
+        if(result.boxes.some(b=>b.w!==image.readUInt32BE(16)||b.h!==image.readUInt32BE(20))) throw Error('Invalid segmentation dimensions');
         return result;
       });
       return result;
     },
-    async transcribe(user,audio) {
+    async transcribe(user:string,audio:Buffer) {
       validateWav(audio);
-      const body=new FormData();body.append('request',new Blob([JSON.stringify({mode:'DIARIZATION',model:'muse-voice-transcribe-1.0',audioEncoding:'WAV'})],{type:'application/json'}));body.append('audio',new Blob([audio],{type:'audio/wav'}),'command.wav');
-      const result=await call(user,`voice-${randomUUID()}`,`asr/transcribe?sessionId=${randomUUID()}`,body,{},result=>{
-        if(typeof result?.transcript!=='string'||result.transcript.length>2000) throw Error('Invalid transcript');
+      const body=new FormData();body.append('request',new Blob([JSON.stringify({mode:'DIARIZATION',model:'muse-voice-transcribe-1.0',audioEncoding:'WAV'})],{type:'application/json'}));body.append('audio',new Blob([new Uint8Array(audio)],{type:'audio/wav'}),'command.wav');
+      const result=await call(user,`voice-${randomUUID()}`,`asr/transcribe?sessionId=${randomUUID()}`,body,{},input=>{
+        const result=z.object({transcript:z.string().max(2000)}).parse(input);
         return result;
       });
       return {transcript:result.transcript};

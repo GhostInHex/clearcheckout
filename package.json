@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx server/index.js",
-    "build": "vite build && tsx scripts/build-extension.ts",
-    "start": "NODE_ENV=production tsx server/index.js",
-    "test": "tsx --test tests/*.test.js tests/*.test.ts",
+    "dev": "tsx server/index.ts",
+    "build": "vite build && tsx scripts/build-extension.ts && npm run build:server",
+    "start": "NODE_ENV=production node build/server/server/index.js",
+    "test": "tsx --test tests/*.test.ts",
     "test:browser": "tsx tests/browser.js",
     "test:dom": "tsx tests/dom-browser.js",
     "test:extension": "tsx tests/extension-browser.js",
@@ -18,7 +18,9 @@
     "test:microphone": "tsx tests/microphone-browser.js",
     "test:media-live-browser": "tsx tests/media-live-browser.js",
     "build:vercel": "npm run build && tsx scripts/copy-vercel-downloads.ts",
-    "typecheck:checkout": "tsc -p tsconfig.checkout.json && tsc -p tsconfig.browser-tests.json"
+    "typecheck:checkout": "tsc -p tsconfig.checkout.json && tsc -p tsconfig.browser-tests.json",
+    "build:server": "tsc -p tsconfig.server.json",
+    "typecheck:server": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.node-tests.json"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",

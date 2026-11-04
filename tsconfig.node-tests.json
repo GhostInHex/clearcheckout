@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "tests/*.test.ts",
+    "server/**/*.ts",
+    "scripts/verify-compiled-server.ts"
+  ]
+}

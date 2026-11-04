@@ -1,6 +1,6 @@
 import {chromium} from '@playwright/test';
 import assert from 'node:assert/strict';
-import {createApp} from '../server/app.js';
+import {createApp} from '../server/app.ts';
 const browser=await chromium.launch({headless:true});
 try {
  for(const configured of [false,true]) {

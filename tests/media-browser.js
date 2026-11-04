@@ -1,6 +1,6 @@
 import {chromium,expect} from '@playwright/test';
 import assert from 'node:assert/strict';
-import {createApp} from '../server/app.js';
+import {createApp} from '../server/app.ts';
 const {app,db}=createApp({dbPath:':memory:',aiOptions:{config:{key:'',budgetMicros:5000000,callLimit:100}}});
 const server=app.listen(0),browser=await chromium.launch({headless:true});
 try {

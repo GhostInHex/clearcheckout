@@ -27,10 +27,35 @@ Browser runs used `BROWSER_BASE_URL=http://localhost:3431` and a server with `DB
 
 ## Remaining P01 work
 
-Convert React sources, shared DOM, all server modules, extension content and messages, remaining tests, live-provider scripts,  and any supported source/config not yet covered. Keep JSON, CSS, HTML, and static media assets. Update index.html when its JSX entry moves. The DOM browser test must consume a browser build rather than raw TypeScript after shared DOM conversion.
+Convert React sources, shared DOM, extension content and messages, remaining browser fixtures, live-provider scripts,  and any supported source/config not yet covered. Keep JSON, CSS, HTML, and static media assets. Update index.html when its JSX entry moves. The DOM browser test must consume a browser build rather than raw TypeScript after shared DOM conversion.
 
 Add complete environment-specific strict configurations, whole-repository typecheck and CI enforcement, lint configuration if enforcing lint, compiled server output under build/server, and production start from that output. Do not use partial configurations as evidence of repository-wide success. Preserve .env.example names, API response and cookie/origin/header contracts, no-store, user_version 1, daily cap and AI spending reservations. P03 owns schema changes.
 
 Rerun all eight baseline command names and confirm failure exit propagation. Verify populated isolated-database preservation, compiled production startup, clean packaging/download URLs, no Node imports in browser artifacts, and a source/suppression inventory. Complete typed MV3 content and messages. Independent DeepSeek and GLM review belongs to root before PR opening. No performance claim is made and no benchmark was run. Python assembly remains Python. Packaging requires the system `zip` executable. ESM mode and Vercel deployment routing remain unchanged. The video recording script is typechecked but was not executed because it invokes live providers.
 
 Type System Discipline changed the request model to schema-derived variants. Model the Domain changed checkout state and event types to discriminated unions. Skill-requested delegation was not run because the implementation brief expressly forbids children.
+
+
+## Server and Node-test unit after b7c3fa9
+
+Completed in the existing worktree on `t3/strict-typescript-conversion`. All five `server/*.js` modules and all four remaining `tests/*.test.js` files are now TypeScript. `server/contracts.ts` parses SQLite users, sessions, counts, order bodies, preferences, and status errors. Provider payloads and cached media results are schema-validated. The ledger returns a cached-result or reservation union. No casts, explicit any, or TypeScript suppressions were added to server code.
+
+`tsconfig.server.json` compiles NodeNext ESM and its shared checkout dependencies into `build/server/server/` and `build/server/shared/`. It uses strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes, and noEmitOnError. `tsconfig.node-tests.json` checks Node tests and the compiled-server verification script. `npm run typecheck:server` checks both configurations; this is partial coverage, not a whole-repository typecheck.
+
+`npm run dev` uses tsx on `server/index.ts`. `npm start` runs Node on `build/server/server/index.js`. `npm run build` retains Vite and extension packaging and adds server compilation. The extension ZIP and `/extension` static paths remain available; the compiled server directory is not a static root. Browser mock fixtures import the renamed app through tsx. README and the .env.example comment reference the new entry; environment variable names are unchanged.
+
+Verification commands, all passed (logs under `artifacts/program/P01/server-unit/`):
+
+- `npm run typecheck:server`
+- `npm test` (19 tests)
+- `npm run build`
+- `npm run test:meta-browser`
+- `npm run test:media-browser`
+- `npx tsx scripts/verify-compiled-server.ts`
+- `git diff --check`
+
+The compiled verifier launches actual `npm start` with an isolated temporary SQLite database and port 3487 (override with COMPILED_TEST_PORT). It checks signup, session persistence after process restart, no-store, review-before-confirmation, completed_demo persistence, user_version 1, 400/409/413/503 responses, frontend and extension downloads, and absence of server-source exposure. It stops the process group and removes the temporary database. An initial download check failed because absolute sendFile paths through hidden `.t3` directories are denied by Express; the route now supplies a static root and the rerun passed. Earlier baseline artifacts and screenshots remain intact. Mock browser runs occurred after builds, never concurrently.
+
+The SQLite DDL, session cookies, origin/header checks, daily order cap, 50000 micro-USD reservations, ai_safety ledger, provider no-retry behavior, payment transitions, and type:module are preserved. No live model call, production key/data access, deployment, push, PR, or child agent was used. Independent DeepSeek and GLM reviews remain root-owned.
+
+Remaining P01: React/DOM conversion, MV3 content/messages, browser and live-provider fixture conversion, complete strict configurations, whole-repository typecheck and CI enforcement, and the full eight-command integrated regression rerun. This unit does not claim P01 completion. P03 still owns migrations. Type System Discipline put schemas at external boundaries; Model the Domain made cached versus newly reserved calls separate variants.

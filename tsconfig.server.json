@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.checkout.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": ".",
+    "outDir": "build/server",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "noEmitOnError": true
+  },
+  "include": [
+    "server/**/*.ts",
+    "shared/checkout.ts",
+    "shared/checkout-schema.ts"
+  ]
+}
