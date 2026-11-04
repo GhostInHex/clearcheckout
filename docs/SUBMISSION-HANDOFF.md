@@ -6,7 +6,7 @@ ClearCheckout helps blind and low-vision shoppers explore a checkout with local 
 
 - Demo (Vercel, recommended for judges): https://clearcheckout-one.vercel.app
 - Demo (sandbox, direct backend): https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech
-- Source archive: https://clearcheckout-one.vercel.app/clearcheckout-source.zip (redirects to GitHub `main`; the latest documentation-only commit may lag)
+- Source archive: https://clearcheckout-one.vercel.app/clearcheckout-source.zip (redirects to the GitHub `main` archive, which includes the final documentation)
 - Video: https://clearcheckout-one.vercel.app/clearcheckout-submission.mp4
 - Captions: https://clearcheckout-one.vercel.app/clearcheckout-captions.srt
 - Chromium extension: https://clearcheckout-one.vercel.app/clearcheckout-extension.zip

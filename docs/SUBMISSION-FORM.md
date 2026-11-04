@@ -147,9 +147,8 @@ Suggested: How our data and our users' data would be stored or used
 ## Notes before submitting
 
 - Links were checked on 2026-11-04: repository, demo, video, captions, and
-  extension archive all return HTTP 200. The Vercel source link redirects to the
-  GitHub `main` archive; the sandbox source archive includes the final
-  documentation commit even if GitHub has not received it yet.
+  extension archive all return HTTP 200. The Vercel source link resolves to the
+  GitHub `main` archive, which includes the final documentation.
 - The Vercel production deployment passed the full signup-to-confirmation
   browser journey with zero reported axe violations and no page errors. Its
   API proxy, exact-origin allowlist, secure cookies, and a live Contributor
