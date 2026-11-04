@@ -6,10 +6,11 @@ ClearCheckout helps blind and low-vision shoppers explore a checkout with local 
 
 - Demo (Vercel, recommended for judges): https://clearcheckout-one.vercel.app
 - Demo (sandbox, direct backend): https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech
-- Source archive: https://clearcheckout-one.vercel.app/clearcheckout-source.zip (redirects to GitHub `main`)
+- Source archive: https://clearcheckout-one.vercel.app/clearcheckout-source.zip (redirects to GitHub `main`; the latest documentation-only commit may lag)
 - Video: https://clearcheckout-one.vercel.app/clearcheckout-submission.mp4
 - Captions: https://clearcheckout-one.vercel.app/clearcheckout-captions.srt
 - Chromium extension: https://clearcheckout-one.vercel.app/clearcheckout-extension.zip
+- Source archive (current, sandbox): https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech/clearcheckout-source.zip
 
 The Vercel frontend proxies `/api/*` to this sandbox. Both demo URLs stop working when the sandbox stops; this is not permanent independent hosting. The `clearcheckout-demo` user service restarts on process failure. Preserve `data/` and the private server configuration. The Vercel source link resolves to the GitHub `main` archive, so only committed files are included.
 
