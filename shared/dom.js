@@ -80,6 +80,16 @@ export function observeRepairs(root, onRepair = () => {}) {
   return () => observer.disconnect();
 }
 
+export function clearRepairs(root) {
+  for (const element of controls(root)) {
+    const owned = ownedLabels.get(element);
+    if (!owned) continue;
+    if (element.getAttribute('aria-label') === owned) element.removeAttribute('aria-label');
+    element.removeAttribute('data-clearcheckout-repaired');
+    ownedLabels.delete(element);
+  }
+}
+
 export function runCommand(root, command) {
   const targets = {cart: '[data-checkout-cart]', delivery: '[data-checkout-delivery]', review: '[data-checkout-review]'};
   const target = root?.querySelector(targets[command] || '[data-command-never]');

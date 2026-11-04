@@ -1,4 +1,4 @@
-import {scan,repair,observeRepairs,runCommand,keyboardCommand} from '../shared/dom.js';
+import {scan,repair,observeRepairs,clearRepairs,runCommand,keyboardCommand} from '../shared/dom.js';
 if(document.getElementById('clearcheckout-host')) document.getElementById('clearcheckout-host').dispatchEvent(new Event('clearcheckout-close'));
 else {
 const previousFocus=document.activeElement;
@@ -9,7 +9,7 @@ root.getElementById('scan').onclick=()=>{const findings=scan(document);announce(
 root.getElementById('repair').onclick=()=>{const result=repair(document);stop();stop=observeRepairs(document);announce(`${result.repaired} labels repaired. ${result.unknown} unknown controls unchanged. Repairs stay active.`);};
 const keyboard=e=>{const command=keyboardCommand(e);if(command){e.preventDefault();announce(runCommand(document,command));}};document.addEventListener('keydown',keyboard);
 root.querySelectorAll('[data-command]').forEach(button=>button.onclick=()=>announce(runCommand(document,button.dataset.command)));
-const close=()=>{stop();document.removeEventListener('keydown',keyboard);host.remove();if(previousFocus?.isConnected)previousFocus.focus();};root.getElementById('close').onclick=close;host.addEventListener('clearcheckout-close',close);
+const close=()=>{stop();clearRepairs(document);document.removeEventListener('keydown',keyboard);host.remove();if(previousFocus?.isConnected)previousFocus.focus();};root.getElementById('close').onclick=close;host.addEventListener('clearcheckout-close',close);
 root.getElementById('close').focus();
 const large=root.getElementById('large');chrome.storage.local.get('large').then(value=>{large.checked=Boolean(value.large);root.querySelector('section').style.fontSize=large.checked?'20px':'16px';});large.onchange=()=>{root.querySelector('section').style.fontSize=large.checked?'20px':'16px';chrome.storage.local.set({large:large.checked});};
 }
