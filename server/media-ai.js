@@ -38,16 +38,22 @@ export function parseBoxes(text) {
 export function createMedia(db,{config=metaConfig(),transport=fetch,timeoutMs=90000,dataDir='data/media'}={}) {
   const reserve=createLedger(db,config),scenePath=path.join(dataDir,'scene.png');
   let generating=false;
-  async function call(user,cacheKey,endpoint,body,headers={}) {
+  async function call(user,cacheKey,endpoint,body,headers={},validate=result=>result) {
     if(!config.key) fail(503,'Meta media models are not configured.');
     const r=reserve.immediate(user,cacheKey);
-    if(r.cached) return JSON.parse(r.cached);
+    if(r.cached) {
+      try {return validate(JSON.parse(r.cached));}
+      catch {
+        db.prepare("UPDATE ai_calls SET status='failed' WHERE user_id=? AND cache_key=? AND status='complete'").run(user,cacheKey);
+        fail(502,'The saved Meta result was invalid. Try again after the request limit clears.');
+      }
+    }
     try {
       const response=await transport(`https://api.meta.ai/v1/${endpoint}`,{method:'POST',redirect:'error',signal:AbortSignal.timeout(timeoutMs),headers:{Authorization:`Bearer ${config.key}`,...headers},body});
       if(!response.ok) throw Error('Provider error');
       const raw=await response.text();
       if(raw.length>16000000) throw Error('Oversized response');
-      const result=endpoint==='responses'?parseStream(raw):JSON.parse(raw);
+      const result=validate(endpoint==='responses'?parseStream(raw):JSON.parse(raw));
       db.prepare("UPDATE ai_calls SET status='complete',text=? WHERE id=?").run(endpoint.startsWith('asr/')?null:JSON.stringify(result),r.id);
       return result;
     } catch {db.prepare("UPDATE ai_calls SET status='failed' WHERE id=?").run(r.id);fail(502,'Meta media request failed. No automatic retry was made.');}
@@ -63,6 +69,11 @@ export function createMedia(db,{config=metaConfig(),transport=fetch,timeoutMs=90
     if(!complete) throw Error('Incomplete stream');
     return {boxes:parseBoxes(text)};
   }
+  function validateImage(result) {
+    const b=Buffer.from(result?.data?.[0]?.b64_json||'','base64');
+    if(b.length<24||b.length>10000000||b.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||b.readUInt32BE(16)<1||b.readUInt32BE(20)<1||b.readUInt32BE(16)>4096||b.readUInt32BE(20)>4096) throw Error('Invalid image');
+    return result;
+  }
   return {
     scene(){return existsSync(scenePath)?readFileSync(scenePath):null;},
     async generate(user) {
@@ -70,9 +81,8 @@ export function createMedia(db,{config=metaConfig(),transport=fetch,timeoutMs=90
       if(generating) fail(409,'Scene generation is already running.');
       generating=true;
       try {
-        const result=await call(user,'media-scene-v1','images/generations',JSON.stringify({model:'muse-image-1.0',prompt:'Illustrative studio still life on a plain light background. Exactly one oat colored stoneware mug with a large handle and one rectangular tea box. Objects fully visible, separated widely, no overlap. No other objects. Not an actual product photograph.',n:1,response_format:'b64_json',output_format:'png',tool_enablement:{enable_image_search:false,enable_web_search:false,enable_shell:false}}),{'Content-Type':'application/json'});
+        const result=await call(user,'media-scene-v1','images/generations',JSON.stringify({model:'muse-image-1.0',prompt:'Illustrative studio still life on a plain light background. Exactly one oat colored stoneware mug with a large handle and one rectangular tea box. Objects fully visible, separated widely, no overlap. No other objects. Not an actual product photograph.',n:1,response_format:'b64_json',output_format:'png',tool_enablement:{enable_image_search:false,enable_web_search:false,enable_shell:false}}),{'Content-Type':'application/json'},validateImage);
         const b=Buffer.from(result.data?.[0]?.b64_json||'','base64');
-        if(b.length<24||b.length>10000000||b.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||b.readUInt32BE(16)>4096||b.readUInt32BE(20)>4096) fail(502,'The generated image was invalid.');
         mkdirSync(dataDir,{recursive:true});writeFileSync(scenePath+'.tmp',b);renameSync(scenePath+'.tmp',scenePath);
         return {ready:true,cached:false};
       }finally {generating=false;}
@@ -80,16 +90,20 @@ export function createMedia(db,{config=metaConfig(),transport=fetch,timeoutMs=90
     async locate(user,object) {
       if(!['mug','tea box'].includes(object)) fail(400,'Choose mug or tea box.');
       if(!existsSync(scenePath)) fail(409,'Generate the illustrative scene first.');
-      const result=await call(user,`media-box-v1-${object}`,'responses',JSON.stringify({model:'sam-3.1',stream:true,input:[{type:'message',role:'user',content:[{type:'input_text',text:object},{type:'input_image',image_url:`data:image/png;base64,${readFileSync(scenePath).toString('base64')}`}]}]}),{'Content-Type':'application/json',Accept:'text/event-stream'});
       const image=readFileSync(scenePath);
-      if(result.boxes.some(b=>b.w!==image.readUInt32BE(16)||b.h!==image.readUInt32BE(20))) fail(502,'SAM returned dimensions inconsistent with the illustration.');
+      const result=await call(user,`media-box-v1-${object}`,'responses',JSON.stringify({model:'sam-3.1',stream:true,input:[{type:'message',role:'user',content:[{type:'input_text',text:object},{type:'input_image',image_url:`data:image/png;base64,${image.toString('base64')}`}]}]}),{'Content-Type':'application/json',Accept:'text/event-stream'},result=>{
+        if(!Array.isArray(result?.boxes)||result.boxes.some(b=>b.w!==image.readUInt32BE(16)||b.h!==image.readUInt32BE(20))) throw Error('Invalid segmentation dimensions');
+        return result;
+      });
       return result;
     },
     async transcribe(user,audio) {
       validateWav(audio);
       const body=new FormData();body.append('request',new Blob([JSON.stringify({mode:'DIARIZATION',model:'muse-voice-transcribe-1.0',audioEncoding:'WAV'})],{type:'application/json'}));body.append('audio',new Blob([audio],{type:'audio/wav'}),'command.wav');
-      const result=await call(user,`voice-${randomUUID()}`,`asr/transcribe?sessionId=${randomUUID()}`,body);
-      if(typeof result.transcript!=='string'||result.transcript.length>2000) fail(502,'No usable transcript was returned.');
+      const result=await call(user,`voice-${randomUUID()}`,`asr/transcribe?sessionId=${randomUUID()}`,body,{},result=>{
+        if(typeof result?.transcript!=='string'||result.transcript.length>2000) throw Error('Invalid transcript');
+        return result;
+      });
       return {transcript:result.transcript};
     }
   };

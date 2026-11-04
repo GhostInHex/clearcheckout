@@ -3,7 +3,7 @@
 Verified locally on 2026-11-04 after merging the Meta integration and extension repair cleanup.
 
 - `npm run build` passed and produced the Vite app and MV3 zip.
-- `npm test` passed 15 account, payment, provider-request, media-format, shared-budget, cache, throttle, and durable-budget tests. Provider responses in these tests are mocked.
+- `npm test` passed 17 account, payment, provider-request, media-format, shared-budget, cache, throttle, and durable-budget tests. Provider responses in these tests are mocked.
 - `npm run test:browser` passed the connected Chromium signup, onboarding, preference persistence, repair, cart-change, review, and simulated-confirmation journey. Axe assertions passed on landing, signup, onboarding, dashboard, preferences, confirmation, and completion. No page errors or mobile horizontal overflow were observed.
 - `npm run test:dom` passed real Chromium regressions for unnamed forms, changed action text, attribute mutations, rerenders, merchant overrides, and idle observation.
 - `npm run test:extension` passed injection, label repair, focus on opening, focus restoration on close, enlarged guidance text, cleanup, and reopened-panel action changes. The fixture adds test-only localhost permission. The real toolbar gesture remains a manual check.
@@ -19,3 +19,5 @@ Media API verification on 2026-11-04 generated a 1,758,773-byte PNG through Muse
 `npm run test:media-browser` passed mocked UI checks for transcript review, focus-only navigation, rejection of payment speech, highlights, and magnification. `npm run test:microphone` passed Chromium simulated-device checks for explicit Stop, component unmount, ten-second automatic stop, and no unapproved upload. Physical microphone and real assistive-technology testing remain unverified.
 
 `npm run test:media-live-browser -- /tmp/clearcheckout-command.wav` passed the live shopper UI at 2026-11-04T21:01:43.207Z. Voice returned HTTP 200 with `Go to cart`; Apply moved focus while order state remained draft. Cached Muse Image content loaded with HTTP 200, and live SAM returned HTTP 200 with one rendered highlight and a visible magnified region. Nonsecret results are in `artifacts/media-live-verification.json`; screenshots are `artifacts/voice-live.png` and `artifacts/visual-live.png`. Transcription can vary between calls; unknown transcripts must leave the order untouched.
+
+The media review found one cache recovery defect. Parent moved image and SAM dimension validation before success caching, added recovery for old invalid cached results, and verified both explicit retries and retained reservations. The new recovery regressions pass. A fresh recheck of this fix is pending.
