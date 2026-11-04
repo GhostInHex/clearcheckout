@@ -44,6 +44,8 @@ npm run build
 npm start
 # In another terminal
 npm run test:browser
+npm run test:dom
+npm run test:extension
 ```
 
 Browser verification writes screenshots and the actual axe violation report to `artifacts/`. Automated accessibility checks are not a screen reader audit.
