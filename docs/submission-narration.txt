@@ -14,22 +14,22 @@ The clarity panel scans demo controls and repairs reliable labels locally. The p
 Muse Spark explains an approved order summary. The screen discloses that Contributor prompts and responses may be used for training. I explicitly approve this request. The trusted app total remains the source to verify.
 
 00:00:56,191 06-spark-result
-This live Spark response demonstrates why verification matters. It renders raw cent values incorrectly as dollars. The trusted app total is forty two dollars. AI guidance cannot change or confirm the order.
+Muse Spark explains the items, delivery and next step in plain language. The app sends prices already formatted in dollars. The trusted total remains forty two dollars. AI guidance cannot change or confirm the order.
 
-00:01:07,441 07-voice-approval
+00:01:08,360 07-voice-approval
 Voice navigation uses Muse Voice Transcribe. This nonprivate synthetic recording says, go to cart. Selecting a file stays local until I choose Send audio to Meta. A transcript must be reviewed before applying a supported command.
 
-00:01:20,232 08-voice-review
+00:01:21,152 08-voice-review
 The real transcript is ready for review. I apply go to cart, which moves navigation to the cart. Voice commands cannot edit quantities or confirm payment. The final decision remains manual.
 
-00:01:31,037 09-visual-approval
+00:01:31,956 09-visual-approval
 Muse Image supplies a saved illustrative scene, not a product photograph. I select the mug and explicitly request SAM localization. No checkout fields or page images are sent for this step.
 
-00:01:41,933 10-visual-result
+00:01:42,853 10-visual-result
 SAM returns actual highlighted regions and a magnified view. This helps inspect the illustration. A box is an object region, not arbitrary checkout understanding, and SAM does not verify the product details.
 
-00:01:53,950 11-confirm
+00:01:54,870 11-confirm
 Finally, I review the items, delivery and total. I type the exact phrase shown by the app, then press Confirm simulated payment myself. Neither the explanation nor voice navigation can perform this confirmation.
 
-00:02:05,833 12-completed
+00:02:06,753 12-completed
 The demo is complete. No money moved and no real order was placed. ClearCheckout combines local control repair, plain language guidance, reviewed voice navigation and visual exploration, with a deliberate human confirmation at the end.

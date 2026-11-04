@@ -79,3 +79,5 @@ The demo includes opt-in Muse Voice Transcribe navigation and a reusable Muse Im
 ## Hosted submission demo
 
 The reviewed submission is available at https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech while the sandbox runs. Source and extension archives are served at `/clearcheckout-source.zip` and `/clearcheckout-extension.zip`. The server runs as the user service `clearcheckout-demo`; restart with `systemctl --user restart clearcheckout-demo`. Its runtime enables secure cookies. `PUBLIC_ORIGIN` must match the exact public HTTPS origin when a proxy rewrites Host. `TRUST_PROXY=loopback` trusts only a local reverse proxy; leave it unset for direct local development. A bare local HTTP browser session cannot use the hosted service’s secure cookies.
+
+The narrated submission video is available at `/clearcheckout-submission.mp4`, with sidecar captions at `/clearcheckout-captions.srt`. See `docs/SUBMISSION-HANDOFF.md` for all links, judge steps, and limitations.
