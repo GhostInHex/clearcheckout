@@ -19,7 +19,6 @@
     "tests/domain.test.ts",
     "scripts/build-extension.ts",
     "scripts/copy-vercel-downloads.ts",
-    "vite.config.ts",
-    "scripts/video/record.ts"
+    "vite.config.ts"
   ]
 }

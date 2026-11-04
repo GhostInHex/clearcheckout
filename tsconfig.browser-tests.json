@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.checkout.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ]
+  },
+  "include": [
+    "scripts/video/record.ts"
+  ]
+}

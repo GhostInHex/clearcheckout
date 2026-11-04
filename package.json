@@ -18,7 +18,7 @@
     "test:microphone": "tsx tests/microphone-browser.js",
     "test:media-live-browser": "tsx tests/media-live-browser.js",
     "build:vercel": "npm run build && tsx scripts/copy-vercel-downloads.ts",
-    "typecheck:checkout": "tsc -p tsconfig.checkout.json"
+    "typecheck:checkout": "tsc -p tsconfig.checkout.json && tsc -p tsconfig.browser-tests.json"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",
