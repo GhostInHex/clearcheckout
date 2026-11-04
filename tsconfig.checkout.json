@@ -19,6 +19,7 @@
     "tests/domain.test.ts",
     "scripts/build-extension.ts",
     "scripts/copy-vercel-downloads.ts",
-    "vite.config.ts"
+    "vite.config.ts",
+    "eslint.config.ts"
   ]
 }

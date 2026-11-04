@@ -5,14 +5,14 @@ import {mkdirSync, writeFileSync} from 'node:fs';
 const audioPath = process.argv[2];
 if (!audioPath) throw new Error('Supply a nonprivate WAV fixture. This test makes paid Meta calls.');
 const browser = await chromium.launch({headless: true});
-const report = {verifiedAt: new Date().toISOString()};
-async function shopper(label) {
+const report: {verifiedAt:string; voice?: {model:string;status:number;transcript:string|null;appliedCommand?:string|null}; image?:{model:string;status:number}; sam?:{model:string;status:number;highlightedRegions:number}} = {verifiedAt: new Date().toISOString()};
+async function shopper(label: string) {
   const page = await browser.newPage();
   await page.goto(process.env.BROWSER_BASE_URL || 'http://localhost:3000');
   await page.evaluate(async label => {
-    const request = (path, body) => fetch('/api' + path, {method: path === '/preferences' ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json', 'X-ClearCheckout': '1'}, body: JSON.stringify(body)});
-    await request('/signup', {email: `${label}-${Date.now()}@example.test`, password: 'local-media-browser1234'});
-    await request('/preferences', {preferences: {textSize: 'standard', contrast: false, guidance: 'brief'}});
+    const client={request(path: string, body: unknown){return fetch('/api' + path, {method: path === '/preferences' ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json', 'X-ClearCheckout': '1'}, body: JSON.stringify(body)});}};
+    await client.request('/signup', {email: `${label}-${Date.now()}@example.test`, password: 'local-media-browser1234'});
+    await client.request('/preferences', {preferences: {textSize: 'standard', contrast: false, guidance: 'brief'}});
   }, label);
   await page.reload();
   await page.getByRole('button', {name: 'Open the demo store'}).click();
@@ -33,7 +33,7 @@ try {
     const label = await apply.textContent();
     await apply.click();
     report.voice.appliedCommand = label;
-    if (label.trim() === 'Apply go to cart') assert.equal(await voice.evaluate(() => document.activeElement?.id), 'cart-heading');
+    if (label?.trim() === 'Apply go to cart') assert.equal(await voice.evaluate(() => document.activeElement?.id), 'cart-heading');
   } else {
     await expect(voice.getByText('No supported command recognized. No action taken.', {exact: true})).toBeVisible();
     report.voice.appliedCommand = null;

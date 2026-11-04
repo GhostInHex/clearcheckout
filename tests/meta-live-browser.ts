@@ -1,3 +1,4 @@
+import {z} from 'zod';
 import {chromium, expect} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {mkdirSync, writeFileSync} from 'node:fs';
@@ -16,7 +17,7 @@ try {
   const responsePromise = page.waitForResponse(response => response.url().endsWith('/api/ai/explain'));
   await page.getByRole('button', {name: 'Explain with Meta AI'}).click();
   const response = await responsePromise;
-  const result = await response.json();
+  const result = z.object({model:z.string(),cached:z.boolean(),text:z.string(),error:z.string().optional()}).parse(await response.json());
   assert.equal(response.status(), 200, result.error || 'Live Meta request failed');
   assert.equal(result.model, 'muse-spark-1.3-contributor');
   assert.equal(result.cached, false);

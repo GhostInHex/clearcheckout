@@ -1,6 +1,6 @@
 # P01 implementation checkpoint
 
-P01 is incomplete. This checkpoint starts at 8ccd87af6cad93b397ad5cf899f68ece9b5ef77c in `/data/home/.t3/worktrees/clearcheckout/t3-431ee7ff`, branch `t3/strict-typescript-conversion`. No later stage is implemented. No push or PR has been made.
+P01 implementation is code-ready after the final tooling unit below. Independent DeepSeek and GLM review remains pending. Historical checkpoint entries start at 8ccd87af6cad93b397ad5cf899f68ece9b5ef77c in `/data/home/.t3/worktrees/clearcheckout/t3-431ee7ff`, branch `t3/strict-typescript-conversion`. No later stage is implemented. No push or PR has been made.
 
 ## Implemented
 
@@ -85,3 +85,30 @@ Builds completed before browser suites started. The shopper, extension and micro
 An initial frontend check exposed a missing CSS declaration include; the declaration and config include were added before the successful receipt. An initial packaging edit accidentally targeted content.ts output; it was corrected to content.js and the local archive was deleted and rebuilt to remove zip's retained stale entry. The final archive receipt verifies the original three-file contract.
 
 P01 remains incomplete. Remaining work includes JavaScript browser fixtures, live-provider scripts, whole-repository strict typecheck and CI enforcement, complete source/suppression inventory and fresh independent DeepSeek and GLM reviews. No Next.js work is included. Type System Discipline moved response parsing to unknown JSON boundaries and reused shared schemas. Model the Domain kept checkout events schema-derived and represented the active microphone resources as one typed record. Independent reviews remain parent-owned under the explicit no-children instruction.
+
+
+## Final tooling unit from 99f66d6
+
+This section supersedes the earlier remaining-source lists. All eight browser fixtures and `scripts/verify-media-live.ts` now use TypeScript. Browser globals have explicit fixture-owned declarations. HTTP/provider JSON, extension manifests, and posted explanation payloads are parsed through Zod. Live scripts and the recorder are typechecked but were not executed.
+
+The final tooling data shapes are the strict source-group inventory, typed browser fixture state, parsed response schemas, and an explicit sequential command list. Type System Discipline put response validation at boundaries. Model the Domain kept the regression commands in a single sequence with failure propagation. No assertions, explicit any, ts-ignore, ts-nocheck, or suppression exclusions were introduced. ESLint rejects assertions and suppression comments, and ignores inline lint configuration. There are no first-party JS/MJS/CJS sources or tool-required JavaScript exceptions. Generated JavaScript, Python assembly, JSON, CSS, HTML, and media remain.
+
+The compiler is TypeScript 6.0.3 (resolved version recorded in package-lock.json). The attempted TypeScript 7 plus typescript-eslint installation failed the parser peer constraint; the failure receipt is retained. The supported compiler retains all strict flags. ESLint loads its native TypeScript config with jiti. `npm run typecheck` checks frontend, extension, compiled server, Node tests/helpers, checkout/config, and all browser/scripts groups, then checks complete direct source coverage and browser-platform import exclusion. `tsconfig.json` selects the frontend editor configuration; the npm command is the complete repository check.
+
+CI installs with npm ci, provisions Chromium dependencies and system zip, runs typecheck, lint, unit tests, build:vercel, all non-live browser suites, and compiled npm-start/restart verification. Existing npm command names are preserved. `test:regression` owns an ephemeral localhost port and temporary SQLite database, disables providers, passes a minimal child environment, and never loads .env. Compiled restart verification sets CLEARCHECKOUT_SKIP_ENV_FILE=1 and uses its isolated database and port. Default production .env loading remains unchanged unless this explicit flag is set. No production database, provider key, live call, deployment, push, PR, child, or Next.js change was used.
+
+Successful commands for this unit are recorded below, with receipts under `artifacts/program/P01/final-tooling/`.
+
+- `npm ci` writes `npm-ci.log`.
+- `npm run typecheck` writes `typecheck.log`, including strict inventory and browser Node-import exclusion results.
+- `npm run lint` writes `lint.log`.
+- `npm test` writes `unit.log` and passes all 19 tests.
+- `npm run build:vercel` writes `build-vercel.log`. It invokes `npm run build` before copying downloads.
+- `npm run test:regression` writes `regression.log`. It runs `npm run test:browser`, `npm run test:dom`, `npm run test:extension`, `npm run test:meta-browser`, `npm run test:media-browser`, and `npm run test:microphone` sequentially after the build.
+- `npx tsx scripts/verify-compiled-server.ts` writes `compiled-server.log` and checks actual npm start, populated isolated database persistence through restart, v1 schema, HTTP contracts, static downloads, and private server-source exclusion.
+- ZIP entry and byte comparison checks write `download-artifacts.log`. Outputs are `build/extension/{manifest.json,background.js,content.js}`, `build/clearcheckout-extension.zip`, `dist/clearcheckout-extension.zip`, `dist/assets/`, and `build/server/`.
+- `git diff --check` passes.
+
+Browser screenshots and axe JSON remain under `artifacts/`, including `demo-desktop.png`, `demo-mobile.png`, `accessibility.json`, and the per-journey accessibility reports. Initial manifest parsing, browser evaluate helper, source-bundle CSS, strict inventory, and lint dependency failures remain in named failure receipts. The runner demonstrably propagated browser failures with exit code 1. A typecheck interrupted by npm ci removing executables is retained separately and superseded by the final sequential run.
+
+Manual toolbar activeTab activation remains unverified. Hosted GitHub CI has not been executed here. Real-provider scripts, recorder, real assistive technology, and performance checks were not run. Fresh independent DeepSeek and GLM review is root-owned at the returned code-ready commit. This is implementation evidence, not independent verification or a merge-ready claim. No-comments delegation was skipped under the explicit no-children instruction; the local diff contains no added explanatory code comments or suppression directives. Deslop review kept this unit scoped to fixture conversion, tooling, and isolation.

@@ -1,3 +1,4 @@
+declare global { interface Window { capturedTracks: MediaStreamTrack[]; } }
 import {chromium, expect} from '@playwright/test';
 import assert from 'node:assert/strict';
 const browser = await chromium.launch({headless: true, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream']});
@@ -17,9 +18,9 @@ try {
   page.on('request', request => {if (request.url().endsWith('/api/media/transcribe')) uploads++;});
   await page.goto(process.env.BROWSER_BASE_URL || 'http://localhost:3000');
   await page.evaluate(async () => {
-    const request = (path, body) => fetch('/api' + path, {method: path === '/preferences' ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json', 'X-ClearCheckout': '1'}, body: JSON.stringify(body)});
-    await request('/signup', {email: `mic-${Date.now()}@example.test`, password: 'local-microphone-test123'});
-    await request('/preferences', {preferences: {textSize: 'standard', contrast: false, guidance: 'brief'}});
+    const client={request(path: string, body: unknown){return fetch('/api' + path, {method: path === '/preferences' ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json', 'X-ClearCheckout': '1'}, body: JSON.stringify(body)});}};
+    await client.request('/signup', {email: `mic-${Date.now()}@example.test`, password: 'local-microphone-test123'});
+    await client.request('/preferences', {preferences: {textSize: 'standard', contrast: false, guidance: 'brief'}});
   });
   await page.reload();
   await page.getByRole('button', {name: 'Open the demo store'}).click();

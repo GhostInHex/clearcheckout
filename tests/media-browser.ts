@@ -4,8 +4,9 @@ import {createApp} from '../server/app.ts';
 const {app,db}=createApp({dbPath:':memory:',aiOptions:{config:{key:'',budgetMicros:5000000,callLimit:100}}});
 const server=app.listen(0),browser=await chromium.launch({headless:true});
 try {
- const page=await browser.newPage();await page.goto(`http://localhost:${server.address().port}`);
- await page.evaluate(async()=>{const post=(p,b)=>fetch('/api'+p,{method:p==='/preferences'?'PUT':'POST',headers:{'Content-Type':'application/json','X-ClearCheckout':'1'},body:JSON.stringify(b)});await post('/signup',{email:'media@test.com',password:'correctpassword123'});await post('/preferences',{preferences:{textSize:'standard',contrast:false,guidance:'brief'}});});await page.reload();await page.getByRole('button',{name:'Open the demo store'}).click();
+ const address=server.address();assert(address && typeof address !== 'string');
+ const page=await browser.newPage();await page.goto(`http://localhost:${address.port}`);
+ await page.evaluate(async()=>{const client={post(p: string,b: unknown){return fetch('/api'+p,{method:p==='/preferences'?'PUT':'POST',headers:{'Content-Type':'application/json','X-ClearCheckout':'1'},body:JSON.stringify(b)});}};await client.post('/signup',{email:'media@test.com',password:'correctpassword123'});await client.post('/preferences',{preferences:{textSize:'standard',contrast:false,guidance:'brief'}});});await page.reload();await page.getByRole('button',{name:'Open the demo store'}).click();
  let transcript='Go to review.';await page.route('**/api/media/transcribe',route=>route.fulfill({json:{transcript}}));
  await page.locator('input[type=file]').setInputFiles({name:'command.wav',mimeType:'audio/wav',buffer:Buffer.alloc(44)});
  await page.getByRole('button',{name:'Send audio to Meta',exact:true}).click();await page.getByRole('button',{name:'Apply go to review'}).click();assert.equal(await page.evaluate(()=>document.activeElement?.textContent),'Review and confirm');await expect(page.getByText('Status: draft',{exact:true})).toBeVisible();

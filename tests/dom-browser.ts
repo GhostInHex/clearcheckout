@@ -1,3 +1,4 @@
+declare global { interface Window { dom: typeof import('../shared/dom.js'); stopRepairs: () => void; } }
 import {chromium, expect} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
@@ -12,8 +13,9 @@ try {
     <label for="named">Email</label><input id="named">
     <button id="merchant" aria-label="Merchant label"></button>`);
   await page.evaluate(async source => {
-    window.dom = await import(`data:text/javascript;base64,${btoa(source)}`);
-  }, domBuild.outputFiles[0].text);
+    const module: typeof import('../shared/dom.js') = await import(`data:text/javascript;base64,${btoa(source)}`);
+    window.dom = module;
+  }, domBuild.outputFiles.at(0)?.text ?? (() => {throw Error('Missing DOM bundle');})());
   assert.deepEqual(await page.evaluate(() => window.dom.scan(document).map(item => item.element.id)), ['action', 'shipping', 'empty']);
   await page.evaluate(() => {
     window.dom.repair(document);
@@ -35,7 +37,7 @@ try {
     const replacement = document.createElement('button');
     replacement.id = 'replacement';
     replacement.dataset.checkoutLabel = 'New action';
-    document.getElementById('action').replaceWith(replacement);
+    document.getElementById('action')?.replaceWith(replacement);
   });
   await expect(page.locator('#replacement')).toHaveAccessibleName('New action');
   await expect(page.locator('#merchant')).toHaveAccessibleName('Merchant label');

@@ -5,9 +5,16 @@
       "ES2022",
       "DOM",
       "DOM.Iterable"
-    ]
+    ],
+    "types": [
+      "node",
+      "chrome"
+    ],
+    "allowImportingTsExtensions": true
   },
   "include": [
-    "scripts/video/record.ts"
+    "tests/*browser.ts",
+    "tests/browser.ts",
+    "scripts/**/*.ts"
   ]
 }
