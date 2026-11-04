@@ -11,7 +11,8 @@
     "test:browser": "node tests/browser.js",
     "test:dom": "node tests/dom-browser.js",
     "test:extension": "node tests/extension-browser.js",
-    "test:meta-browser": "node tests/meta-browser.js"
+    "test:meta-browser": "node tests/meta-browser.js",
+    "test:meta-live": "node tests/meta-live-browser.js"
   },
   "dependencies": {
     "express": "^5.1.0",

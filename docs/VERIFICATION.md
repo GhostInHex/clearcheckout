@@ -1,9 +1,15 @@
 # Verification record
 
-`npm run build` produces the Vite production app and MV3 zip. `npm test` passes five tests covering account isolation, hashed password storage, login rejection, logout revocation, SQLite and session reopen persistence, exact amount confirmation, stale revision rejection, cancellation, and simulated failure.
+Verified locally on 2026-11-04 after merging the Meta integration and extension repair cleanup.
 
-`npm run test:browser` runs real Chromium through Playwright against the production build served on port 3000. It passes signup, onboarding, saved preferences after reload, DOM label repair, cart change after review, renewed review, and exact simulated-payment confirmation. The completed demo page has zero axe violations in this run. No browser page errors or mobile horizontal overflow were observed. This is one automated page check, not a WCAG conformance claim or a screen reader audit. Screenshots and the raw axe report are under `artifacts/` after running the command.
+- `npm run build` passed and produced the Vite app and MV3 zip.
+- `npm test` passed 12 account, payment, provider-request, cache, throttle, and durable-budget tests. Provider responses in these tests are mocked.
+- `npm run test:browser` passed the connected Chromium signup, onboarding, preference persistence, repair, cart-change, review, and simulated-confirmation journey. Axe assertions passed on landing, signup, onboarding, dashboard, preferences, confirmation, and completion. No page errors or mobile horizontal overflow were observed.
+- `npm run test:dom` passed real Chromium regressions for unnamed forms, changed action text, attribute mutations, rerenders, merchant overrides, and idle observation.
+- `npm run test:extension` passed injection, label repair, focus on opening, focus restoration on close, enlarged guidance text, cleanup, and reopened-panel action changes. The fixture adds test-only localhost permission. The real toolbar gesture remains a manual check.
+- `npm run test:meta-browser` passed unconfigured behavior, consent, plain-text output, cache, and invalidation against a mocked provider. It makes no live calls.
+- `npm run test:meta-live` passed through the shopper UI using the saved server-side key. The uncached `muse-spark-1.3-contributor` response returned HTTP 200 at 2026-11-04T20:50:38.125Z. The AI response appeared beside the trusted $42.00 demo total. The result and screenshot are in `artifacts/meta-live-verification.json` and `artifacts/meta-live.png`. Rerunning this command consumes API credits.
 
-`node tests/extension-browser.js` uses the built MV3 extension with a test-only localhost host permission so automation can inject without a physical extension-toolbar click. The production manifest retains activeTab access only. The test loads the service worker, injects the panel, repairs a reliably titled control, and closes the panel. The actual toolbar gesture needs manual verification.
+Fresh reviewer agents reproduced the original accessibility defects. Parent fixes passed the targeted reproductions. A final review of Meta integration and close/reopen cleanup is pending.
 
-Independent review is owned by the parent. No deployment, PR, provider integration, real payment, or external message was performed.
+These automated checks do not establish WCAG conformance, production security, universal merchant compatibility, or screen-reader usability. No public deployment or real payment has been verified. No secret is stored in this record or tracked source.

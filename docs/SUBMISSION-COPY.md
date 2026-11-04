@@ -6,6 +6,8 @@ Checkout can become a maze of unnamed buttons and unclear next steps. ClearCheck
 
 The submission includes a responsive web app with real accounts and saved reading preferences, a guided demo store, and an installable MV3 extension. The demo requires an exact confirmation of the order total. Changing the cart or delivery invalidates that confirmation.
 
+With explicit approval, Muse Spark 1.3 Contributor explains the demo order and next step through the official Meta Model API. The trusted total stays separately visible, and AI cannot change or confirm an order. Contributor prompts and responses may be used by Meta for training.
+
 Every demo payment is explicitly simulated. No card details are collected and no money moves. The extension does not submit merchant payments. DOM assistance runs locally without uploading field values or page screenshots.
 
 The next validation step is hands-on testing with blind and low-vision shoppers using their own assistive technology.
