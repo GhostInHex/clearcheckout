@@ -1,3 +1,4 @@
+import {createMedia} from './media-ai.js';
 import express from 'express';
 import {createMetaGuidance} from './meta-ai.js';
 import helmet from 'helmet';
@@ -8,7 +9,7 @@ import {mkdirSync} from 'node:fs';
 import path from 'node:path';
 import {z} from 'zod';
 import {quote, transition, confirmationPhrase} from '../shared/checkout.js';
-export function createApp({dbPath='data/clearcheckout.sqlite', production=false,aiOptions}={}) {
+export function createApp({dbPath='data/clearcheckout.sqlite', production=false,aiOptions,mediaOptions}={}) {
   if (dbPath !== ':memory:') mkdirSync(path.dirname(dbPath),{recursive:true});
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
@@ -17,6 +18,7 @@ export function createApp({dbPath='data/clearcheckout.sqlite', production=false,
     CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,body TEXT NOT NULL,created INTEGER NOT NULL);
     PRAGMA user_version = 1;`);
   const ai=createMetaGuidance(db,aiOptions);
+  const media=createMedia(db,mediaOptions || aiOptions);
   const app=express();
   app.disable('x-powered-by');
   app.use(helmet({contentSecurityPolicy:production ? undefined : false}));
@@ -77,6 +79,11 @@ export function createApp({dbPath='data/clearcheckout.sqlite', production=false,
       res.json(await ai.explain(req.user.id,JSON.parse(row.body),JSON.parse(req.user.preferences).guidance));
     } catch(error) {if(error.status) return res.status(error.status).json({error:error.message});next(error);}
   });
+  const mediaRoute=fn=>async(req,res,next)=>{try {res.json(await fn(req));}catch(e){if(e.status) res.status(e.status).json({error:e.message});else next(e);}};
+  app.get('/api/media/scene',(req,res)=>{const image=media.scene();if(!image)return res.status(404).json({error:'Scene is not generated yet.'});res.type('png').send(image);});
+  app.post('/api/media/scene',mediaRoute(req=>media.generate(req.user.id)));
+  app.post('/api/media/locate',mediaRoute(req=>media.locate(req.user.id,req.body.object)));
+  app.post('/api/media/transcribe',express.raw({type:'audio/wav',limit:'500kb'}),mediaRoute(req=>{if(!Buffer.isBuffer(req.body))throw Object.assign(new Error('Upload a WAV file.'),{status:400});return media.transcribe(req.user.id,req.body);}));
   app.get('/api/me',(req,res)=>res.json(publicUser(req.user)));
   const preferences=z.object({textSize:z.enum(['standard','large','larger']),contrast:z.boolean(),guidance:z.enum(['detailed','brief'])}).strict();
   app.put('/api/preferences',(req,res)=>{

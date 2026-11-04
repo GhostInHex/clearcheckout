@@ -1,0 +1,25 @@
+# Meta media integrations
+
+Voice navigation serves blind shoppers with an explicit recording, upload, transcript review, and apply sequence. The exact commands are “go to cart”, “go to delivery”, “go to review”, and “read total”. Navigation focuses headings. It never invokes review, confirmation, quantity, delivery, or payment actions. Unknown speech does nothing. The microphone stops after ten seconds, on Stop, on unmount, and on setup errors. WebAudio records locally and resamples to mono PCM16 24 kHz WAV. A WAV upload provides a fallback. The server checks RIFF chunks, encoding, channels, byte rate, sample rate, size, and duration before reserving or uploading.
+
+The visual explorer serves low-vision shoppers with a generated illustrative scene, selected-object outlines, and an enlarged crop. It only sends a fixed prompt to Muse Image and only the stored generated PNG to SAM. It accepts no arbitrary images, URLs, or generation prompts. Generated art is labeled and cannot verify actual product appearance. SAM boxes use documented source-pixel coordinates. The parser reads paired box/mask special tokens, checks boundaries and source dimensions, and renders boxes. It does not decode or render mask pixels. Zero matches produces an honest message.
+
+## Setup
+
+Use the existing `MODEL_API_KEY` or `MODEL_API_KEY_FILE` server configuration. No additional feature flags are required. `META_AI_BUDGET_USD` and `META_AI_CALL_LIMIT` apply to every model together, capped at $5 and 100 attempts. Each attempt reserves $0.05 permanently, including failures. The existing 30-second per-user throttle also spans capabilities. Cached calls bypass it. There are no automatic retries. Spark's usage safety block also blocks new media reservations. Media billing uses the fixed bounded reservation rather than Spark token validation. Audio is at most ten seconds, images at most one per request. The documented prices are $0.18/hour for transcription, $0.01/image generation, and $0.0025/image segmentation.
+
+The generated scene persists at `data/media/scene.png`. Scene generation is serialized in one server process. Deploy one process for this demo. Provider image responses and SAM results persist in the existing SQLite ledger for caching. Audio bytes and transcripts are not persisted by this integration. Meta receives approved audio and the fixed illustrative scene. Provider retention policies still apply. Restoring both the database and media directory preserves the allowance and scene. Do not delete the ledger to reset spending.
+
+## Official request shapes
+
+- `POST https://api.meta.ai/v1/images/generations` uses `muse-image-1.0`, a fixed prompt, `n:1`, `response_format:b64_json`, `output_format:png`, and all search/shell tools disabled. It reads `data[0].b64_json`.
+- `POST https://api.meta.ai/v1/asr/transcribe?sessionId=<uuid>` uses multipart `request` JSON with `mode:DIARIZATION`, `model:muse-voice-transcribe-1.0`, `audioEncoding:WAV`, and an `audio` WAV part. It reads the complete `transcript` field.
+- `POST https://api.meta.ai/v1/responses` uses `sam-3.1`, `stream:true`, a noun phrase, and an `input_image` data URL of the stored PNG. It accumulates `response.output_text.delta` until `response.completed`, then parses `<0f>id<|box;...|><|mask;...|>` records. Box coordinates are pixels, not normalized values.
+
+Sources read during implementation are [speech to text](https://dev.meta.ai/docs/speech-to-text), [media segmentation](https://dev.meta.ai/docs/media-segmentation), and [SAM output grammar](https://dev.meta.ai/docs/sam/reading-segmentation). Image request details and pricing follow the parent's checked official [image generation](https://dev.meta.ai/docs/image-generation) and [pricing](https://dev.meta.ai/docs/pricing-rate-limits) brief.
+
+## Verification
+
+Run `npm ci`, `npm run build`, `npm test`, and `npm run test:media-browser`. The media browser test mocks HTTP responses and verifies focus-only navigation, rejection of payment speech, and model-driven highlighting. Unit tests exercise documented SAM tokens, WAV boundaries, media requests, caches, and the shared ledger. Existing browser, DOM, extension, and Meta browser checks remain applicable.
+
+Live provider verification belongs to the parent. No live calls were made by the implementation agent. Start the configured server normally. Prepare nonprivate speech with `espeak -w /tmp/source.wav 'Go to cart'` and `ffmpeg -i /tmp/source.wav -ac 1 -ar 24000 -c:a pcm_s16le -map_metadata -1 /tmp/command.wav`. Run `MEDIA_LIVE_STAGE=sam npm run test:media-live -- /tmp/command.wav`, then `MEDIA_LIVE_STAGE=voice npm run test:media-live -- /tmp/command.wav`. Set `BROWSER_BASE_URL` if needed. These scripts create disposable accounts, generate or reuse the scene, and print byte count, returned boxes, or transcript without credentials or base64. They do incur paid calls. Inspect the generated image in the app, locate both objects, and try microphone stop/unmount in a real browser. Microphone capture and actual provider behavior still require live verification.

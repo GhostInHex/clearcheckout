@@ -12,7 +12,9 @@
     "test:dom": "node tests/dom-browser.js",
     "test:extension": "node tests/extension-browser.js",
     "test:meta-browser": "node tests/meta-browser.js",
-    "test:meta-live": "node tests/meta-live-browser.js"
+    "test:meta-live": "node tests/meta-live-browser.js",
+    "test:media-browser": "node tests/media-browser.js",
+    "test:media-live": "node scripts/verify-media-live.js"
   },
   "dependencies": {
     "express": "^5.1.0",

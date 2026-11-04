@@ -71,3 +71,7 @@ Published Contributor rates are $0.10 per million input tokens and $0.20 per mil
 Official sources: [Quickstart](https://dev.meta.ai/docs/quickstart), [Responses reference](https://dev.meta.ai/docs/api-reference/responses/create-response), [Pricing and contributor data terms](https://dev.meta.ai/docs/pricing-rate-limits). Provider transport tests use explicitly mocked responses, not live inference. A configured key is not evidence of a successful live call; live verification must be recorded separately. Without a key the UI clearly says Meta AI is not configured and never substitutes fake AI output.
 
 Live Meta inference was verified through the shopper UI on 2026-11-04 using `muse-spark-1.3-contributor`. The uncached request returned HTTP 200. Run `npm run test:meta-live` only against a configured local server when you intend to consume API credits. It creates a test account and makes one live request; its nonsecret result and screenshot are saved under `artifacts/`.
+
+## Voice and visual assistance
+
+The demo includes opt-in Muse Voice Transcribe navigation and a reusable Muse Image illustration explored with SAM 3.1. See [multimodal setup, safety boundaries, and live verification](docs/MULTIMODAL.md). These integrations have mocked verification; live media calls are pending parent verification.
