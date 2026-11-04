@@ -75,3 +75,7 @@ Live Meta inference was verified through the shopper UI on 2026-11-04 using `mus
 ## Voice and visual assistance
 
 The demo includes opt-in Muse Voice Transcribe navigation and a reusable Muse Image illustration explored with SAM 3.1. See [multimodal setup, safety boundaries, and live verification](docs/MULTIMODAL.md). These integrations have mocked verification; live media calls are pending parent verification.
+
+## Hosted submission demo
+
+The reviewed submission is available at https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech while the sandbox runs. Source and extension archives are served at `/clearcheckout-source.zip` and `/clearcheckout-extension.zip`. The server runs as the user service `clearcheckout-demo`; restart with `systemctl --user restart clearcheckout-demo`. Its runtime enables secure cookies. `PUBLIC_ORIGIN` must match the exact public HTTPS origin when a proxy rewrites Host. `TRUST_PROXY=loopback` trusts only a local reverse proxy; leave it unset for direct local development. A bare local HTTP browser session cannot use the hosted service’s secure cookies.
