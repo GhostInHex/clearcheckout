@@ -4,13 +4,14 @@ ClearCheckout helps blind and low-vision shoppers explore a checkout with local 
 
 ## Submission links
 
-- Demo: https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech
-- Source archive: https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech/clearcheckout-source.zip
-- Video: https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech/clearcheckout-submission.mp4
-- Captions: https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech/clearcheckout-captions.srt
-- Chromium extension: https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech/clearcheckout-extension.zip
+- Demo (Vercel, recommended for judges): https://clearcheckout-one.vercel.app
+- Demo (sandbox, direct backend): https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech
+- Source archive: https://clearcheckout-one.vercel.app/clearcheckout-source.zip (redirects to GitHub `main`)
+- Video: https://clearcheckout-one.vercel.app/clearcheckout-submission.mp4
+- Captions: https://clearcheckout-one.vercel.app/clearcheckout-captions.srt
+- Chromium extension: https://clearcheckout-one.vercel.app/clearcheckout-extension.zip
 
-The demo URL is served from this sandbox and requires it to remain running. This is not permanent independent hosting. The `clearcheckout-demo` user service restarts on process failure. Preserve `data/` and the private server configuration.
+The Vercel frontend proxies `/api/*` to this sandbox. Both demo URLs stop working when the sandbox stops; this is not permanent independent hosting. The `clearcheckout-demo` user service restarts on process failure. Preserve `data/` and the private server configuration. The Vercel source link resolves to the GitHub `main` archive, so only committed files are included.
 
 ## Judge walkthrough
 
@@ -26,7 +27,7 @@ Uncached model calls share a 30-second per-account cooldown, a durable app-wide 
 
 ## Scope and evidence
 
-The code includes persisted local accounts, sessions, preferences, order history, the embedded store, and an installable MV3 companion. All four Meta models have passed live checks. Eighteen tests, browser journeys, automated accessibility checks, and fresh reviewer passes are recorded in `docs/VERIFICATION.md`.
+The code includes persisted local accounts, sessions, preferences, order history, the embedded store, and an installable MV3 companion. All four Meta models have passed live checks, and the Vercel production URL passed the full signup-to-confirmation browser journey. Eighteen tests, browser journeys, automated accessibility checks, and fresh reviewer passes are recorded in `docs/VERIFICATION.md`.
 
 The app has not completed testing with blind or low-vision participants using their own assistive technology. Payments, subscription billing, password recovery, email verification, universal merchant compatibility, and production operation are outside this submission. See `README.md` for exact limitations. Do not claim a production security audit or WCAG conformance.
 

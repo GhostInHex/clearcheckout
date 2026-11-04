@@ -74,10 +74,12 @@ Live Meta inference was verified through the shopper UI on 2026-11-04 using `mus
 
 ## Voice and visual assistance
 
-The demo includes opt-in Muse Voice Transcribe navigation and a reusable Muse Image illustration explored with SAM 3.1. See [multimodal setup, safety boundaries, and live verification](docs/MULTIMODAL.md). These integrations have mocked verification; live media calls are pending parent verification.
+The demo includes opt-in Muse Voice Transcribe navigation and a reusable Muse Image illustration explored with SAM 3.1. See [multimodal setup, safety boundaries, and live verification](docs/MULTIMODAL.md). These integrations have mocked browser coverage and verified live calls: image generation, SAM mug detection, and transcription all returned HTTP 200, and the integrated UI focus-only navigation passed. Physical microphone and real assistive-technology testing remain unverified.
 
 ## Hosted submission demo
 
-The reviewed submission is available at https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech while the sandbox runs. Source and extension archives are served at `/clearcheckout-source.zip` and `/clearcheckout-extension.zip`. The server runs as the user service `clearcheckout-demo`; restart with `systemctl --user restart clearcheckout-demo`. Its runtime enables secure cookies. `PUBLIC_ORIGIN` must match the exact public HTTPS origin when a proxy rewrites Host. `TRUST_PROXY=loopback` trusts only a local reverse proxy; leave it unset for direct local development. A bare local HTTP browser session cannot use the hosted service’s secure cookies.
+https://clearcheckout-one.vercel.app is the judge-facing deployment. Vercel serves the static frontend and forwards `/api/*` to this sandbox, so the sandbox must stay running. Signup, saved preferences, repair, review, simulated confirmation, and a live Meta explanation were verified through that URL on 2026-11-04.
+
+The reviewed submission is also available at https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech while the sandbox runs. Source and extension archives are served at `/clearcheckout-source.zip` and `/clearcheckout-extension.zip`. The Vercel source archive redirects to the GitHub `main` branch archive. The server runs as the user service `clearcheckout-demo`; restart with `systemctl --user restart clearcheckout-demo`. Its runtime enables secure cookies. `PUBLIC_ORIGIN` must match the exact public HTTPS origin when a proxy rewrites Host. `TRUST_PROXY=loopback` trusts only a local reverse proxy; leave it unset for direct local development. A bare local HTTP browser session cannot use the hosted service’s secure cookies.
 
 The narrated submission video is available at `/clearcheckout-submission.mp4`, with sidecar captions at `/clearcheckout-captions.srt`. See `docs/SUBMISSION-HANDOFF.md` for all links, judge steps, and limitations.
