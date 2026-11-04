@@ -1,6 +1,7 @@
 import {chromium, expect} from '@playwright/test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {build} from 'esbuild';
+const domBuild = await build({entryPoints:['shared/dom.ts'],bundle:true,format:'esm',write:false});
 
 const browser = await chromium.launch({headless: true});
 try {
@@ -12,7 +13,7 @@ try {
     <button id="merchant" aria-label="Merchant label"></button>`);
   await page.evaluate(async source => {
     window.dom = await import(`data:text/javascript;base64,${btoa(source)}`);
-  }, readFileSync('shared/dom.js', 'utf8'));
+  }, domBuild.outputFiles[0].text);
   assert.deepEqual(await page.evaluate(() => window.dom.scan(document).map(item => item.element.id)), ['action', 'shipping', 'empty']);
   await page.evaluate(() => {
     window.dom.repair(document);

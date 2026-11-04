@@ -1,35 +1,35 @@
 const selector = 'button, input:not([type=hidden]), select, textarea, a[href], [role=button]';
-const ownedLabels = new WeakMap();
+const ownedLabels = new WeakMap<Element, string>();
 
-function nameOf(element) {
+function nameOf(element: Element) {
   const labelled = element.getAttribute('aria-labelledby');
-  if (labelled?.split(/\s+/).some(id => element.ownerDocument.getElementById(id)?.textContent.trim())) return true;
+  if (labelled?.split(/\s+/).some(id => element.ownerDocument.getElementById(id)?.textContent?.trim())) return true;
   if (element.getAttribute('aria-label')?.trim()) return true;
-  if ([...(element.labels || [])].some(label => label.textContent.trim())) return true;
-  if (element.tagName === 'INPUT') {
+  if ([...((element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement || element instanceof HTMLButtonElement) ? element.labels || [] : [])].some(label => label.textContent?.trim())) return true;
+  if (element instanceof HTMLInputElement) {
     if (element.type === 'image') return Boolean(element.alt?.trim());
     return ['button', 'submit', 'reset'].includes(element.type) && Boolean(element.value.trim());
   }
   if (['SELECT', 'TEXTAREA'].includes(element.tagName)) return false;
-  return Boolean(element.textContent.trim() || element.querySelector('img[alt]:not([alt=""])'));
+  return Boolean(element.textContent?.trim() || element.querySelector('img[alt]:not([alt=""])'));
 }
 
-function controls(root) {
+function controls(root: ParentNode) {
   return [...root.querySelectorAll(selector)].filter(element => !element.closest('[data-clearcheckout-panel]'));
 }
 
-function reliableLabel(element) {
+function reliableLabel(element: Element) {
   return (element.getAttribute('data-checkout-label') || element.getAttribute('title'))?.trim().slice(0, 120) || null;
 }
 
-export function scan(root) {
+export function scan(root: ParentNode) {
   return controls(root).filter(element => !nameOf(element)).map((element, index) => {
     const label = reliableLabel(element);
     return {element, label, description: label ? `Missing name: ${label}` : `Unknown ${element.tagName.toLowerCase()} control ${index + 1}. Needs a human label.`};
   });
 }
 
-export function repair(root) {
+export function repair(root: ParentNode) {
   let repaired = 0;
   for (const element of controls(root)) {
     const owned = ownedLabels.get(element);
@@ -64,7 +64,7 @@ export function repair(root) {
   return {repaired, unknown: scan(root).filter(item => !item.label).length};
 }
 
-export function observeRepairs(root, onRepair = () => {}) {
+export function observeRepairs(root: Node & ParentNode, onRepair: (result: ReturnType<typeof repair>) => void = () => {}) {
   const options = {childList: true, characterData: true, subtree: true, attributes: true,
     attributeFilter: ['aria-label', 'aria-labelledby', 'title', 'data-checkout-label', 'type', 'alt', 'for', 'id', 'value']};
   const observer = new MutationObserver(() => {
@@ -80,7 +80,7 @@ export function observeRepairs(root, onRepair = () => {}) {
   return () => observer.disconnect();
 }
 
-export function clearRepairs(root) {
+export function clearRepairs(root: ParentNode) {
   for (const element of controls(root)) {
     const owned = ownedLabels.get(element);
     if (!owned) continue;
@@ -90,14 +90,14 @@ export function clearRepairs(root) {
   }
 }
 
-export function runCommand(root, command) {
-  const targets = {cart: '[data-checkout-cart]', delivery: '[data-checkout-delivery]', review: '[data-checkout-review]'};
+export function runCommand(root: ParentNode | null, command: string) {
+  const targets: Record<string, string> = {cart: '[data-checkout-cart]', delivery: '[data-checkout-delivery]', review: '[data-checkout-review]'};
   const target = root?.querySelector(targets[command] || '[data-command-never]');
-  if (!target) return 'That section is not available on this page. No action was taken.';
+  if (!(target instanceof HTMLElement)) return 'That section is not available on this page. No action was taken.';
   target.focus();
   return `Moved to ${command}. Review the details before taking an action.`;
 }
-export function keyboardCommand(event) {
+export function keyboardCommand(event: KeyboardEvent) {
   if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) return null;
-  return {c: 'cart', d: 'delivery', r: 'review'}[event.key.toLowerCase()] || null;
+  const keys: Record<string, string> = {c: 'cart', d: 'delivery', r: 'review'}; return keys[event.key.toLowerCase()] || null;
 }

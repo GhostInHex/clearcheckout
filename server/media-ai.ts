@@ -1,7 +1,6 @@
 import {z} from 'zod';
 import {fail,json,type Db,type ProviderOptions} from './contracts.js';
-const boxSchema=z.object({id:z.string(),x1:z.number(),y1:z.number(),x2:z.number(),y2:z.number(),w:z.number(),h:z.number()});
-const boxesSchema=z.object({boxes:z.array(boxSchema)});
+import {boxesSchema} from '../shared/api-schema.js';
 const imageSchema=z.object({data:z.tuple([z.object({b64_json:z.string()})]).rest(z.unknown())});
 import {mkdirSync,existsSync,readFileSync,writeFileSync,renameSync} from 'node:fs';
 import path from 'node:path';

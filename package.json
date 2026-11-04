@@ -20,7 +20,9 @@
     "build:vercel": "npm run build && tsx scripts/copy-vercel-downloads.ts",
     "typecheck:checkout": "tsc -p tsconfig.checkout.json && tsc -p tsconfig.browser-tests.json",
     "build:server": "tsc -p tsconfig.server.json",
-    "typecheck:server": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.node-tests.json"
+    "typecheck:server": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.node-tests.json",
+    "typecheck:frontend": "tsc -p tsconfig.frontend.json",
+    "typecheck:extension": "tsc -p tsconfig.extension.json"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",

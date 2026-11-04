@@ -12,10 +12,12 @@
     ],
     "lib": [
       "ES2022",
-      "DOM"
+      "DOM",
+      "DOM.Iterable"
     ]
   },
   "include": [
-    "extension/background.ts"
+    "extension/**/*.ts",
+    "shared/dom.ts"
   ]
 }

@@ -59,3 +59,29 @@ The compiled verifier launches actual `npm start` with an isolated temporary SQL
 The SQLite DDL, session cookies, origin/header checks, daily order cap, 50000 micro-USD reservations, ai_safety ledger, provider no-retry behavior, payment transitions, and type:module are preserved. No live model call, production key/data access, deployment, push, PR, or child agent was used. Independent DeepSeek and GLM reviews remain root-owned.
 
 Remaining P01: React/DOM conversion, MV3 content/messages, browser and live-provider fixture conversion, complete strict configurations, whole-repository typecheck and CI enforcement, and the full eight-command integrated regression rerun. This unit does not claim P01 completion. P03 still owns migrations. Type System Discipline put schemas at external boundaries; Model the Domain made cached versus newly reserved calls separate variants.
+
+## Browser-source unit after daad285
+
+Converted all three React sources to TSX, shared DOM to TypeScript, and MV3 content to TypeScript. The extension configuration now covers every extension source and shared DOM. `typecheck:frontend` covers all React, declaration, and shared TypeScript sources. Both configurations retain strict, noUncheckedIndexedAccess and exactOptionalPropertyTypes. Existing script names remain available.
+
+Browser-safe `shared/api-schema.ts` owns the existing preferences and persisted-order schemas, re-exported by server contracts, and the existing SAM box schema used by both server and client. React parses unknown JSON into schema-derived users, order lists, checkout results, explanation and media results. No server or SQLite import enters browser bundles. DOM controls and extension UI use actual element narrowing. Keyboard handlers, label ownership, observer disconnect/reconnect, focus restoration and media lifecycle behavior remain in place. Extension activation uses the existing scripting API, with no new message protocol. The DOM fixture compiles shared DOM with esbuild before importing the resulting JavaScript in Chromium.
+
+Fresh successful receipts are in `artifacts/program/P01/browser-source/`:
+
+- `frontend.log`, `extension.log`, `server.log`, `checkout.log`: all four strict check commands passed.
+- `unit.log`: npm test passed 19 tests.
+- `build.log`: npm run build passed, including compiled server and extension packaging.
+- `browser.log`: shopper journey passed with no axe violations or page errors.
+- `dom.log`: unnamed controls, action changes, merchant precedence, replacement and idle observer regressions passed.
+- `extension-browser.log`: installed MV3 injection, repairs, panel size, close/reopen and focus restoration passed. Toolbar activeTab gesture remains unverified.
+- `meta.log`, `media.log`: mocked provider consent, explanation caching/invalidation, transcript review, unsupported commands and SAM geometry passed.
+- `microphone.log`: simulated device Stop, unmount, automatic stop and no unapproved upload passed.
+- `compiled-server.log`: isolated compiled server persistence/restart verification passed.
+- `browser-imports.log`: esbuild browser-platform bundles passed with no server or SQLite inputs.
+- `zip.log`: clean archive contains only manifest.json, background.js and content.js.
+
+Builds completed before browser suites started. The shopper, extension and microphone server used port 3431 and `/tmp/clearcheckout-p01-browser-source.sqlite`, directly importing createApp without loading .env. Mock suites used their isolated fixtures. The compiled verifier used its own temporary DB and port. The local fixture server was stopped after verification. No production data, public port 3000, live provider, recorder, deployment, push, PR or child agent was used.
+
+An initial frontend check exposed a missing CSS declaration include; the declaration and config include were added before the successful receipt. An initial packaging edit accidentally targeted content.ts output; it was corrected to content.js and the local archive was deleted and rebuilt to remove zip's retained stale entry. The final archive receipt verifies the original three-file contract.
+
+P01 remains incomplete. Remaining work includes JavaScript browser fixtures, live-provider scripts, whole-repository strict typecheck and CI enforcement, complete source/suppression inventory and fresh independent DeepSeek and GLM reviews. No Next.js work is included. Type System Discipline moved response parsing to unknown JSON boundaries and reused shared schemas. Model the Domain kept checkout events schema-derived and represented the active microphone resources as one typed record. Independent reviews remain parent-owned under the explicit no-children instruction.
