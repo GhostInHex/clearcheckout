@@ -1,3 +1,4 @@
+import {checkoutEventSchema} from '../shared/checkout-schema.js';
 import {createMedia} from './media-ai.js';
 import express from 'express';
 import {createMetaGuidance} from './meta-ai.js';
@@ -107,12 +108,7 @@ export function createApp({dbPath='data/clearcheckout.sqlite', production=false,
     db.prepare('INSERT INTO orders VALUES(?,?,?,?)').run(order.id,req.user.id,JSON.stringify(order),Date.now());
     res.status(201).json(save(order,req.user.id));
   });
-  const cart=z.object({tea:z.number().int().min(0).max(9),mug:z.number().int().min(0).max(9)}).strict().refine(v=>v.tea+v.mug>0,'Keep at least one item in the cart.');
-  const event=z.discriminatedUnion('type',[
-    z.object({type:z.literal('change'),cart,delivery:z.enum(['standard','express'])}),
-    z.object({type:z.literal('review')}),z.object({type:z.literal('cancel')}),
-    z.object({type:z.literal('confirm'),phrase:z.string().max(80),revision:z.number().int(),outcome:z.enum(['success','fail'])})
-  ]);
+  const event=checkoutEventSchema;
   app.post('/api/orders/:id',(req,res)=>{
     const row=db.prepare('SELECT body FROM orders WHERE id=? AND user_id=?').get(req.params.id,req.user.id);
     if(!row) return res.status(404).json({error:'Order not found.'});
