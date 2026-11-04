@@ -1,4 +1,5 @@
 import express from 'express';
+import {createMetaGuidance} from './meta-ai.js';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import Database from 'better-sqlite3';
@@ -7,7 +8,7 @@ import {mkdirSync} from 'node:fs';
 import path from 'node:path';
 import {z} from 'zod';
 import {quote, transition, confirmationPhrase} from '../shared/checkout.js';
-export function createApp({dbPath='data/clearcheckout.sqlite', production=false}={}) {
+export function createApp({dbPath='data/clearcheckout.sqlite', production=false,aiOptions}={}) {
   if (dbPath !== ':memory:') mkdirSync(path.dirname(dbPath),{recursive:true});
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
@@ -15,6 +16,7 @@ export function createApp({dbPath='data/clearcheckout.sqlite', production=false}
     CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id TEXT NOT NULL,expires INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,body TEXT NOT NULL,created INTEGER NOT NULL);
     PRAGMA user_version = 1;`);
+  const ai=createMetaGuidance(db,aiOptions);
   const app=express();
   app.disable('x-powered-by');
   app.use(helmet({contentSecurityPolicy:production ? undefined : false}));
@@ -66,6 +68,15 @@ export function createApp({dbPath='data/clearcheckout.sqlite', production=false}
     res.clearCookie('cc_session',{path:'/'}).json({ok:true});
   });
   app.use('/api',(req,res,next)=>req.user ? next() : res.status(401).json({error:'Sign in to continue.'}));
+  app.get('/api/ai/status',(req,res)=>res.json({configured:ai.configured,model:'muse-spark-1.3-contributor'}));
+  app.post('/api/ai/explain',async(req,res,next)=>{
+    try {
+      const {orderId}=z.object({orderId:z.string().regex(/^[a-f0-9]{24}$/)}).strict().parse(req.body);
+      const row=db.prepare('SELECT body FROM orders WHERE id=? AND user_id=?').get(orderId,req.user.id);
+      if(!row) return res.status(404).json({error:'Order not found.'});
+      res.json(await ai.explain(req.user.id,JSON.parse(row.body),JSON.parse(req.user.preferences).guidance));
+    } catch(error) {if(error.status) return res.status(error.status).json({error:error.message});next(error);}
+  });
   app.get('/api/me',(req,res)=>res.json(publicUser(req.user)));
   const preferences=z.object({textSize:z.enum(['standard','large','larger']),contrast:z.boolean(),guidance:z.enum(['detailed','brief'])}).strict();
   app.put('/api/preferences',(req,res)=>{

@@ -32,3 +32,9 @@ SaaS subscription billing, general-store payment automation, universal store com
 ## Verification and handoff
 
 Passing compilation alone is insufficient. Record commands and observed behavior. A reviewer must distinguish runnable local product, configured integrations, simulated behavior, and anything not yet verified. Never claim full production readiness from a hackathon build.
+
+### Official Meta AI integration
+
+ClearCheckout offers optional, consent-based order explanations through Meta's official Responses API using Muse Spark 1.3 Contributor. It explains the authenticated demo order and next step according to the shopper's saved guidance preference. The authoritative total stays visible beside advisory AI text. Contributor prompts and responses may be used for Meta training; the approval disclosure appears before sending. No personal account data or page fields are sent. Local DOM repairs and simulated checkout work independently.
+
+Status: integration implemented with mocked HTTP and browser verification; live Meta inference is pending private key configuration and a recorded successful live call. No live success is claimed here. The server applies a durable, conservative $5 maximum app allowance, 100-attempt limit, per-user throttle, no automatic retries, and revision-aware caching. See README for configuration, accounting limits, and official sources.
