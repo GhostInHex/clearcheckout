@@ -1,3 +1,5 @@
+import {z} from 'zod';
+import type {Locator} from '@playwright/test';
 import { chromium } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
@@ -8,9 +10,9 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 900 
 const page = await context.newPage();
 const origin = process.env.DEMO_URL || 'https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech';
 const started = Date.now();
-const chapters = [];
-const pause = ms => page.waitForTimeout(ms);
-async function chapter(name, narration, action) {
+const chapters: {name: string; narration: string; start: number; end: number}[] = [];
+const pause = (ms: number) => page.waitForTimeout(ms);
+async function chapter(name: string, narration: string, action: () => Promise<void>) {
   const start = (Date.now() - started) / 1000;
   await action();
   await pause(1800);
@@ -19,7 +21,7 @@ async function chapter(name, narration, action) {
   writeFileSync(`${out}/chapters.json`, JSON.stringify(chapters, null, 2));
   console.log(name);
 }
-async function show(locator) { await locator.scrollIntoViewIfNeeded(); await pause(400); }
+async function show(locator: Locator) { await locator.scrollIntoViewIfNeeded(); await pause(400); }
 try {
   await page.goto(origin);
   await chapter('01-purpose', 'ClearCheckout helps people navigate a checkout at their own pace. This is the real public app. Local label repair and optional Meta assistance keep the shopper in control. All payments in this demo are simulated.', async () => {});
@@ -74,7 +76,7 @@ try {
   const sceneResponse = page.waitForResponse(r => r.url().endsWith('/api/media/scene') && r.request().method() === 'POST');
   await page.getByRole('button', { name: 'Load or generate illustration', exact: true }).click();
   const scene = await sceneResponse;
-  const sceneData = await scene.json();
+  const sceneData = z.object({cached:z.boolean().optional()}).parse(await scene.json());
   if (!scene.ok() || !sceneData.cached) throw Error('Expected globally cached illustration');
   await chapter('09-visual-approval', 'Muse Image supplies a saved illustrative scene, not a product photograph. I select the mug and explicitly request SAM localization. No checkout fields or page images are sent for this step.', async () => {
     await show(page.getByRole('button', { name: 'Locate with SAM 3.1', exact: true }));
@@ -95,6 +97,7 @@ try {
     await show(page.locator('.order-review'));
     await pause(2000);
     const label = await page.locator('label[for=confirm] strong').textContent();
+    if (label === null) throw Error('Confirmation phrase is missing');
     await field.pressSequentially(label, { delay: 120 });
     await pause(1000);
     await page.getByRole('button', { name: 'Confirm simulated payment' }).click();
@@ -104,6 +107,7 @@ try {
 } finally {
   const video = page.video();
   await context.close();
+  if (video === null) throw Error('Video recording is unavailable');
   await video.saveAs(`${out}/raw.webm`);
   await browser.close();
 }
