@@ -35,6 +35,4 @@ Before another recording, check the remaining app budget and request new authori
 
 ## Observed model limitation
 
-The recorded Spark response displayed raw cent amounts as dollar values, including `4200 USD`.
-The app's trusted total remained `$42.00 USD`.
-The narration explicitly identifies this model error. The video retains the real response.
+The first capture exposed ambiguous raw cent values in the model input. The app now sends only formatted USD amounts and explicitly prohibits unit conversion. A fresh live response correctly rendered the $24.00 and $18.00 item prices and $42.00 total. The recording script and narration use the corrected behavior. AI output remains advisory, and the trusted app total stays separately visible.

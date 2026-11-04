@@ -50,7 +50,7 @@ try {
   await page.getByRole('button', { name: 'Explain with Meta AI', exact: true }).click();
   const spark = await sparkResponse;
   if (!spark.ok()) throw Error(`Spark HTTP ${spark.status()}`);
-  await chapter('06-spark-result', 'This live Spark response demonstrates why verification matters. It renders raw cent values incorrectly as dollars. The trusted app total is forty two dollars. AI guidance cannot change or confirm the order.', async () => {
+  await chapter('06-spark-result', 'Muse Spark explains the items, delivery and next step in plain language. The app sends prices already formatted in dollars. The trusted total remains forty two dollars. AI guidance cannot change or confirm the order.', async () => {
     await page.getByText('Meta AI guidance', { exact: true }).waitFor();
     await show(page.locator('.meta-guidance'));
   });
