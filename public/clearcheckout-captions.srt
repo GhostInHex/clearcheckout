@@ -1,0 +1,155 @@
+1
+00:00:00,000 --> 00:00:03,601
+ClearCheckout helps people navigate a checkout at their own
+pace. This is the real public app. Local
+
+2
+00:00:03,601 --> 00:00:07,203
+label repair and optional Meta assistance keep the shopper in
+control. All payments in this demo are
+
+3
+00:00:07,203 --> 00:00:10,804
+simulated.
+
+4
+00:00:11,304 --> 00:00:15,771
+A synthetic demo account starts with personal reading
+preferences. No payment details are requested.
+
+5
+00:00:15,771 --> 00:00:20,237
+Here we choose large text, then save our preferences to our
+own space.
+
+6
+00:00:20,737 --> 00:00:24,316
+The dashboard brings the demo store and saved preferences
+together. This prototype demonstrates a
+
+7
+00:00:24,316 --> 00:00:27,895
+focused shopping journey. It does not claim support for every
+store, or completed testing with
+
+8
+00:00:27,895 --> 00:00:31,475
+screen reader users.
+
+9
+00:00:31,975 --> 00:00:35,866
+The clarity panel scans demo controls and repairs reliable
+labels locally. The previously unnamed
+
+10
+00:00:35,866 --> 00:00:39,757
+cart button now has a useful name. Unknown controls still need
+human judgment. Field values are not
+
+11
+00:00:39,757 --> 00:00:43,649
+uploaded by this scan.
+
+12
+00:00:44,149 --> 00:00:47,996
+Muse Spark explains an approved order summary. The screen
+discloses that Contributor prompts and
+
+13
+00:00:47,996 --> 00:00:51,844
+responses may be used for training. I explicitly approve this
+request. The trusted app total remains
+
+14
+00:00:51,844 --> 00:00:55,691
+the source to verify.
+
+15
+00:00:56,191 --> 00:01:00,081
+Muse Spark explains the items, delivery and next step in plain
+language. The app sends prices
+
+16
+00:01:00,081 --> 00:01:03,971
+already formatted in dollars. The trusted total remains forty
+two dollars. AI guidance cannot change
+
+17
+00:01:03,971 --> 00:01:07,860
+or confirm the order.
+
+18
+00:01:08,360 --> 00:01:12,458
+Voice navigation uses Muse Voice Transcribe. This nonprivate
+synthetic recording says, go to cart.
+
+19
+00:01:12,458 --> 00:01:16,555
+Selecting a file stays local until I choose Send audio to
+Meta. A transcript must be reviewed before
+
+20
+00:01:16,555 --> 00:01:20,652
+applying a supported command.
+
+21
+00:01:21,152 --> 00:01:26,304
+The real transcript is ready for review. I apply go to cart,
+which moves navigation to the cart.
+
+22
+00:01:26,304 --> 00:01:31,456
+Voice commands cannot edit quantities or confirm payment. The
+final decision remains manual.
+
+23
+00:01:31,956 --> 00:01:37,155
+Muse Image supplies a saved illustrative scene, not a product
+photograph. I select the mug and
+
+24
+00:01:37,155 --> 00:01:42,353
+explicitly request SAM localization. No checkout fields or
+page images are sent for this step.
+
+25
+00:01:42,853 --> 00:01:46,692
+SAM returns actual highlighted regions and a magnified view.
+This helps inspect the illustration. A
+
+26
+00:01:46,692 --> 00:01:50,531
+box is an object region, not arbitrary checkout understanding,
+and SAM does not verify the product
+
+27
+00:01:50,531 --> 00:01:54,370
+details.
+
+28
+00:01:54,870 --> 00:01:58,664
+Finally, I review the items, delivery and total. I type the
+exact phrase shown by the app, then
+
+29
+00:01:58,664 --> 00:02:02,459
+press Confirm simulated payment myself. Neither the
+explanation nor voice navigation can perform
+
+30
+00:02:02,459 --> 00:02:06,253
+this confirmation.
+
+31
+00:02:06,753 --> 00:02:10,877
+The demo is complete. No money moved and no real order was
+placed. ClearCheckout combines local
+
+32
+00:02:10,877 --> 00:02:15,002
+control repair, plain language guidance, reviewed voice
+navigation and visual exploration, with a
+
+33
+00:02:15,002 --> 00:02:19,126
+deliberate human confirmation at the end.

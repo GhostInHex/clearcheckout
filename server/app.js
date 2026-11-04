@@ -9,7 +9,7 @@ import {mkdirSync} from 'node:fs';
 import path from 'node:path';
 import {z} from 'zod';
 import {quote, transition, confirmationPhrase} from '../shared/checkout.js';
-export function createApp({dbPath='data/clearcheckout.sqlite', production=false,aiOptions,mediaOptions,publicOrigin=process.env.PUBLIC_ORIGIN,trustProxy=false}={}) {
+export function createApp({dbPath='data/clearcheckout.sqlite', production=false,aiOptions,mediaOptions,publicOrigin=process.env.PUBLIC_ORIGIN,publicOrigins=process.env.PUBLIC_ORIGINS,trustProxy=false}={}) {
   if (dbPath !== ':memory:') mkdirSync(path.dirname(dbPath),{recursive:true});
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
@@ -22,14 +22,14 @@ export function createApp({dbPath='data/clearcheckout.sqlite', production=false,
   const app=express();
   app.disable('x-powered-by');
   app.set('trust proxy',trustProxy);
-  const allowedOrigin=publicOrigin ? new URL(publicOrigin).origin : null;
+  const allowedOrigins=new Set([...(publicOrigin?[publicOrigin]:[]),...(publicOrigins||'').split(',').map(value=>value.trim()).filter(Boolean)].map(value=>new URL(value).origin));
   app.use(helmet({contentSecurityPolicy:production ? undefined : false}));
   app.use(express.json({limit:'8kb'}));
   app.use('/api',rateLimit({windowMs:60000,limit:180,standardHeaders:'draft-8',legacyHeaders:false}));
   app.use('/api',(req,res,next)=>{
     let verifiedOrigin=true;
     if(req.get('origin')) {
-      try {verifiedOrigin=allowedOrigin ? req.get('origin')===allowedOrigin : new URL(req.get('origin')).host===req.get('host');}
+      try {verifiedOrigin=allowedOrigins.size ? allowedOrigins.has(req.get('origin')) : new URL(req.get('origin')).host===req.get('host');}
       catch {verifiedOrigin=false;}
     }
     if (!['GET','HEAD'].includes(req.method) && (req.get('x-clearcheckout') !== '1' || !verifiedOrigin)) return res.status(403).json({error:'Request origin could not be verified.'});

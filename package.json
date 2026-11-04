@@ -16,7 +16,8 @@
     "test:media-browser": "node tests/media-browser.js",
     "test:media-live": "node scripts/verify-media-live.js",
     "test:microphone": "node tests/microphone-browser.js",
-    "test:media-live-browser": "node tests/media-live-browser.js"
+    "test:media-live-browser": "node tests/media-live-browser.js",
+    "build:vercel": "npm run build && node scripts/copy-vercel-downloads.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
@@ -33,5 +34,8 @@
     "@playwright/test": "^1.56.1",
     "@axe-core/playwright": "^4.11.0",
     "esbuild": "^0.25.12"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
