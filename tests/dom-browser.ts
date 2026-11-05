@@ -51,6 +51,25 @@ try {
     return count;
   });
   assert.equal(mutationCount, 0, 'Repairs must become idle instead of triggering themselves');
+  await page.setContent(`<span id="proof">Merchant name</span><button id="precedence" aria-labelledby="missing proof" aria-label="Wrong">Text</button><button id="guess" title="Place order"></button><button id="hidden" hidden data-checkout-label="Hidden"></button><div id="shadow"></div><button id="cycle" aria-labelledby="cycle"></button>`);
+  await page.evaluate(() => {
+    const shadow=document.getElementById('shadow')?.attachShadow({mode:'open'});
+    if(!shadow) throw Error('Missing shadow');
+    shadow.innerHTML='<button id="inside" data-checkout-label="Shadow action"></button>';
+    window.dom.repair(document); window.stopRepairs=window.dom.observeRepairs(document);
+  });
+  await expect(page.locator('#precedence')).toHaveAccessibleName('Merchant name');
+  await expect(page.locator('#guess')).not.toHaveAttribute('aria-label');
+  await expect(page.locator('#hidden')).not.toHaveAttribute('aria-label');
+  await expect(page.locator('#inside')).toHaveAccessibleName('Shadow action');
+  await page.locator('#inside').evaluate(element=>element.setAttribute('data-checkout-label','Changed shadow'));
+  await expect(page.locator('#inside')).toHaveAccessibleName('Changed shadow');
+  assert(await page.evaluate(()=>window.dom.scan(document).some(control=>control.element.id==='cycle')));
+  await page.evaluate(()=>{const frame=document.createElement('iframe');document.body.append(frame);const doc=frame.contentDocument;if(!doc)throw Error('Missing same-origin fixture document');doc.body.innerHTML='<label for=field>Frame label</label><input id=field>';if(window.dom.scan(doc).length)throw Error('Cross-realm native labels were lost');});
+  const ids=await page.evaluate(()=>{const a=window.dom.registry(document);const b=window.dom.registry(document);return [a.map(c=>c.id),b.map(c=>c.id)];});
+  assert.deepEqual(ids[0],ids[1]);
+  await page.evaluate(()=>{window.stopRepairs();window.dom.clearRepairs(document);});
+  await expect(page.locator('#inside')).not.toHaveAttribute('aria-label');
   process.stdout.write('DOM browser regressions passed: unnamed forms, changed actions, attributes, merchant overrides, replacements, and idle observation.\n');
 } finally {
   await browser.close();
