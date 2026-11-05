@@ -6,7 +6,7 @@ import {paymentCommandSchema,paymentAttemptSchema,paymentSnapshotSchema,paymentT
 
 const evidenceSchema=paymentSnapshotSchema.unwrap().extend({providerId:z.string().min(1),status:z.enum(['approved','paid','failed','pending'])}).strict();
 // Only a server-owned adapter may implement these methods. No route accepts evidence.
-export type PaymentProvider={approve:(attempt:PaymentAttempt)=>Promise<unknown>;capture:(attempt:PaymentAttempt)=>Promise<unknown>;lookup:(attempt:PaymentAttempt)=>Promise<unknown>};
+export type PaymentProvider={begin?:(attempt:PaymentAttempt)=>Promise<{providerId:string;url:string}>;verifyWebhook?:(headers:Headers,event:unknown)=>Promise<string|undefined>;approve:(attempt:PaymentAttempt)=>Promise<unknown>;capture:(attempt:PaymentAttempt)=>Promise<unknown>;lookup:(attempt:PaymentAttempt)=>Promise<unknown>};
 const requestSchema=z.string().min(1).max(160);
 export function createPayments(db:Database.Database,readOrder:(userId:string,id:string)=>Order & {id:string},provider?:PaymentProvider){
   function read(userId:string,id:string){
@@ -46,11 +46,26 @@ export function createPayments(db:Database.Database,readOrder:(userId:string,id:
     const rows=db.prepare("SELECT body FROM payment_attempts WHERE order_id=? AND state IN ('reviewed','awaitingGesture','approving')").all(orderId);
     for(const row of rows){const attempt=paymentAttemptSchema.parse(JSON.parse(z.object({body:z.string()}).parse(row).body));write(attempt,attempt.state.kind==='approving'?{kind:'unknown',providerId:null}:{kind:'cancelled'});}
   }
-  async function approve(userId:string,id:string){
-    if(!provider)throw Error('Payment provider is not configured.');
+  async function begin(userId:string,id:string){
+    if(!provider?.begin)throw Error('Sandbox provider is not configured.');
     const attempt=command.immediate(userId,id,{type:'gesture'});
+    try{return await provider.begin(attempt);}catch{write(read(userId,id),{kind:'unknown',providerId:null});throw Error('Sandbox creation outcome unknown. Reconcile before continuing.');}
+  }
+  async function webhook(headers:Headers,input:unknown){
+    if(!provider?.verifyWebhook)throw Error('Sandbox provider is not configured.');
+    const id=await provider.verifyWebhook(headers,input);if(!id)return;
+    const row=z.object({user_id:z.string()}).parse(db.prepare('SELECT user_id FROM payment_attempts WHERE id=?').get(id));
+    await reconcile(row.user_id,id);
+    const event=z.object({id:z.string()}).parse(typeof input==='string'?JSON.parse(input):input);
+    db.prepare('INSERT OR IGNORE INTO paypal_webhooks VALUES(?)').run(event.id);
+  }
+  async function approve(userId:string,id:string,token?:string){
+    if(!provider)throw Error('Payment provider is not configured.');
+    const attempt=provider.begin?read(userId,id):command.immediate(userId,id,{type:'gesture'});
+    if(provider.begin && attempt.state.kind!=='approving')throw Error('Approval no longer active.');
     try{
       const approved=evidence(attempt,await provider.approve(attempt));
+      if(provider.begin && approved.providerId!==token)throw Error('Callback order mismatch.');
       const capturing=db.transaction(()=>{
         const current=read(userId,id);
         if(current.state.kind!=='approving')throw Error('Approval no longer active.');
@@ -87,5 +102,5 @@ export function createPayments(db:Database.Database,readOrder:(userId:string,id:
     const rows=db.prepare("SELECT body FROM payment_attempts WHERE state IN ('approving','capturing')").all();
     for(const row of rows){const attempt=paymentAttemptSchema.parse(JSON.parse(z.object({body:z.string()}).parse(row).body));write(attempt,{kind:'unknown',providerId:'providerId' in attempt.state?attempt.state.providerId:null});}
   }).immediate();
-  return {read,review:(userId:string,orderId:string,key:string)=>review.immediate(userId,orderId,key),command:(userId:string,id:string,input:unknown)=>command.immediate(userId,id,paymentCommandSchema.parse(input)),invalidate,approve,reconcile};
+  return {read,begin,webhook,configured:Boolean(provider?.begin),review:(userId:string,orderId:string,key:string)=>review.immediate(userId,orderId,key),command:(userId:string,id:string,input:unknown)=>command.immediate(userId,id,paymentCommandSchema.parse(input)),invalidate,approve,reconcile};
 }

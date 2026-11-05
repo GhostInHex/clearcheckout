@@ -1,4 +1,5 @@
 import {createAuth,hashPassword,checkPassword,type MailAdapter} from './auth.js';
+import {createSandboxPayPal,type SandboxConfig} from './paypal.js';
 import {createPayments,type PaymentProvider} from './orders.js';
 import {migrate} from './migrations/index.js';
 import Database from 'better-sqlite3';
@@ -16,9 +17,9 @@ export class ServiceError extends Error {
   constructor(readonly status:number,message:string){super(message);}
 }
 function fail(status:number,message:string):never {throw new ServiceError(status,message);}
-export type ServiceOptions={mail?:MailAdapter|undefined;appOrigin?:string|undefined;paymentProvider?:PaymentProvider;dbPath?:string;aiOptions?:ProviderOptions;mediaOptions?:ProviderOptions & {dataDir?:string}};
+export type ServiceOptions={sandbox?:SandboxConfig|undefined;mail?:MailAdapter|undefined;appOrigin?:string|undefined;paymentProvider?:PaymentProvider|undefined;dbPath?:string;aiOptions?:ProviderOptions;mediaOptions?:ProviderOptions & {dataDir?:string}};
 const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
-export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,mediaOptions,paymentProvider,mail,appOrigin}:ServiceOptions={}) {
+export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,mediaOptions,paymentProvider,mail,appOrigin,sandbox}:ServiceOptions={}) {
   if (dbPath !== ':memory:') mkdirSync(path.dirname(dbPath),{recursive:true});
   const db = new Database(dbPath);
   try {
@@ -86,7 +87,7 @@ export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,medi
     db.prepare('INSERT INTO orders VALUES(?,?,?,?)').run(value.id,user.id,JSON.stringify(value),Date.now());
     return save(value,user);
   }
-  const payments=createPayments(db,(userId,id)=>order(findUser(userId),id),paymentProvider);
+  const payments=createPayments(db,(userId,id)=>order(findUser(userId),id),sandbox?createSandboxPayPal(db,sandbox):paymentProvider);
   const updateOrder=db.transaction((user:User,id:string,action:CheckoutRequest) => {
     const value=order(user,id);
     try {const next=transition(value,action);if(action.type==='change' || action.type==='cancel' || action.type==='confirm')payments.invalidate(id);return save({...next,id:value.id},user);}catch(error){fail(409,error instanceof Error ? error.message : String(error));}
