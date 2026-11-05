@@ -68,6 +68,18 @@ try {
   await page.evaluate(()=>{const frame=document.createElement('iframe');document.body.append(frame);const doc=frame.contentDocument;if(!doc)throw Error('Missing same-origin fixture document');doc.body.innerHTML='<label for=field>Frame label</label><input id=field>';if(window.dom.scan(doc).length)throw Error('Cross-realm native labels were lost');});
   const ids=await page.evaluate(()=>{const a=window.dom.registry(document);const b=window.dom.registry(document);return [a.map(c=>c.id),b.map(c=>c.id)];});
   assert.deepEqual(ids[0],ids[1]);
+  assert(await page.evaluate(()=>{
+    const element=document.getElementById('guess');if(!element)throw Error('Missing guess');
+    const previous=window.dom.registry(document).find(control=>control.element===element);
+    const replacement=document.createElement('button');replacement.id='guess';replacement.title='Different risky action';element.replaceWith(replacement);
+    const current=window.dom.registry(document).find(control=>control.element===replacement);
+    return previous && current && previous.id!==current.id && current.provenance==='unknown';
+  }));
+  await page.evaluate(()=>{
+    const custom=document.createElement('div');custom.id='custom';custom.setAttribute('role','button');custom.tabIndex=0;document.body.append(custom);
+  });
+  assert(await page.evaluate(()=>window.dom.registry(document).some(control=>control.element.id==='custom' && control.capabilities.includes('custom-keyboard-unknown') && control.label===null)));
+
   await page.evaluate(()=>{window.stopRepairs();window.dom.clearRepairs(document);});
   await expect(page.locator('#inside')).not.toHaveAttribute('aria-label');
   process.stdout.write('DOM browser regressions passed: unnamed forms, changed actions, attributes, merchant overrides, replacements, and idle observation.\n');
