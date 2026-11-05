@@ -15,4 +15,3 @@ export function merchantAdapter(root:ParentNode):MerchantAdapter {
   return target.ownerDocument.activeElement===target;
  }};
 }
-

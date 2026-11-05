@@ -14,10 +14,10 @@ try{
  const worker=context.serviceWorkers()[0]??await context.waitForEvent('serviceworker');
  const page=await context.newPage();await page.goto(fixture.base+'/demo/store-b');
  await worker.evaluate(async()=>{const tabs=await chrome.tabs.query({});const tab=tabs.find(value=>value.url?.includes('/demo/store-b'));if(tab?.id===undefined)throw Error('Missing store tab');await chrome.scripting.executeScript({target:{tabId:tab.id},files:['content.js']});});
- await page.getByRole('button',{name:'Go to delivery'}).click();
+ await page.locator('#clearcheckout-host').getByRole('button',{name:'Go to delivery'}).click();
  await expect(page.locator('[data-checkout-delivery]')).toBeFocused();
  await page.keyboard.press('Alt+Shift+C');await expect(page.locator('[data-checkout-cart]')).toBeFocused();
- await page.getByRole('button',{name:'Previous guided step',exact:true}).click();
+ await page.locator('#clearcheckout-host').getByRole('button',{name:'Previous guided step',exact:true}).click();
  await expect(page.locator('[data-checkout-delivery]')).toBeFocused();
  await page.getByRole('button',{name:'Read total with provenance',exact:true}).click();
  await expect(page.locator('#clearcheckout-host').locator('#status')).toContainText('Unverified DOM total');
