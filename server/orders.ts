@@ -95,7 +95,7 @@ export function createPayments(db:Database.Database,readOrder:(userId:string,id:
     const attempt=read(userId,id);
     if(attempt.state.kind==='paid' || attempt.state.kind==='failed')return attempt;
     if(attempt.state.kind!=='unknown' && attempt.state.kind!=='capturing' && attempt.state.kind!=='approving')throw Error('No provider work to reconcile.');
-    try{const result=evidence(attempt,await provider.lookup(attempt));return settle(userId,id,result);}catch{return read(userId,id);}
+    try{const result=evidence(attempt,await provider.lookup(attempt));if(attempt.state.kind==='approving' && (result.status==='approved' || result.status==='pending'))return read(userId,id);return settle(userId,id,result);}catch{return read(userId,id);}
   }
   // A process restart cannot establish whether the last provider call completed.
   db.transaction(()=>{
