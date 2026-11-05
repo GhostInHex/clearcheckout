@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {spawn,type ChildProcess} from 'node:child_process';
-import {mkdtempSync,readFileSync,appendFileSync} from 'node:fs';
+import {mkdtempSync,readFileSync,appendFileSync,mkdirSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {createServer} from 'node:net';
@@ -12,6 +12,7 @@ import {publicUserSchema,checkoutResponseSchema} from '../shared/api-schema.js';
 const dir=mkdtempSync(path.join(tmpdir(),'cc-next-security-'));const dbPath=path.join(dir,'test.sqlite');
 const probe=createServer();probe.listen(0,'127.0.0.1');await once(probe,'listening');const address=probe.address();if(!address||typeof address==='string')throw Error('No port');const port=address.port;await new Promise<void>(resolve=>probe.close(()=>resolve()));
 const base=`http://127.0.0.1:${port}`;const receipt=path.resolve('artifacts/program/P02/security-parity');
+mkdirSync(receipt,{recursive:true});
 let server:ChildProcess|undefined;
 async function start(fake=true,trustProxy='loopback'){
  server=spawn(process.execPath,['--import','tsx',...(fake?['--import','./tests/next-provider-fixture.ts']:[]),'./scripts/next-start.ts'],{env:{PATH:process.env.PATH,HOME:process.env.HOME,NODE_ENV:fake?'test':'production',HOSTNAME:'127.0.0.1',PORT:String(port),DB_PATH:dbPath,MODEL_API_KEY:fake?'isolated-fake-key':'',COOKIE_SECURE:'true',TRUST_PROXY:trustProxy},stdio:['ignore','pipe','pipe']});
@@ -72,4 +73,4 @@ try{
  const browser=spawn(process.execPath,['--import','tsx','tests/browser.ts'],{env:{PATH:process.env.PATH,HOME:process.env.HOME,NODE_ENV:'test',BROWSER_BASE_URL:base},stdio:['ignore','pipe','pipe']});
  browser.stdout?.on('data',chunk=>appendFileSync(path.join(receipt,'browser.log'),chunk));browser.stderr?.on('data',chunk=>appendFileSync(path.join(receipt,'browser.log'),chunk));assert.deepEqual(await once(browser,'exit'),[0,null]);
  console.log(JSON.stringify({result:'passed',dbPath,checks:'Next security, raw WAV bounds, origin/parser order, secure cookie, account isolation, provider cache/fault/malformed/cooldown/no retries, 50000 reservations, restart session/preferences/media/ledger, source isolation, static assets, independent client limits'}));
-}finally{await stop();}
+}finally{await stop();rmSync(dir,{recursive:true,force:true});}
