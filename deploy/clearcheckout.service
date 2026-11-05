@@ -1,0 +1,28 @@
+[Unit]
+Description=ClearCheckout persistent Next service
+After=network.target
+[Service]
+Type=simple
+User=clearcheckout
+Group=clearcheckout
+WorkingDirectory=/opt/clearcheckout
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=3080
+Environment=DB_PATH=/var/lib/clearcheckout/database.sqlite
+Environment=COOKIE_SECURE=true
+Environment=TRUST_PROXY=loopback
+EnvironmentFile=/etc/clearcheckout/runtime.env
+ExecStart=/usr/bin/npm start
+KillMode=control-group
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/clearcheckout /opt/clearcheckout/.next/cache
+[Install]
+WantedBy=multi-user.target
