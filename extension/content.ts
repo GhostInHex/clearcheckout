@@ -27,6 +27,7 @@ const renderCart=async()=>{
  pendingReview=null;cartControls.replaceChildren();
  const adapter=controlledCart();
  if(adapter.kind!=='controlled-store'){announce('Unsupported merchant. Scan and navigation only.');return;}
+ announce('Reading controlled cart…');
  const result=await adapter.request({kind:'read'});
  if(result.kind==='refused'){announce(result.reason);return;}
  announce(cartSummary(result.cart));
@@ -36,6 +37,7 @@ const renderCart=async()=>{
   const confirm=cartButton(`Confirm removal of ${item.name}`,()=>{
    const review=pendingReview;if(!review)return;pendingReview=null;cartControls.replaceChildren();
    const current=controlledCart();if(current.kind!=='controlled-store'||current.store!==review.cart.store){announce('Merchant changed. Review again.');return;}
+   announce('Removing the reviewed item…');
    void current.request({kind:'remove',review}).then(value=>{announce(value.kind==='refused'?value.reason:`Selected item removed. ${cartSummary(value.cart)} No purchase occurred.`);cartButton('Read controlled cart',()=>{void renderCart();}).focus();});
   });
   cartButton('Cancel removal',()=>{pendingReview=null;cartControls.replaceChildren();announce('Removal cancelled. Cart unchanged.');cartButton('Read controlled cart',()=>{void renderCart();}).focus();});confirm.focus();
