@@ -33,6 +33,9 @@ chrome.runtime.onMessage.addListener((input:unknown,sender,reply)=>{
  return true;
 });
 
+import {labelAdvice,labelFingerprint} from '../shared/label-suggestion.js';
+import {z} from 'zod';
+const previews=new Map<number,{nonce:string;png:string;fingerprint:string}>();
 import {cropRequest,fixtureUrl,inspectFixture} from './crop.js';
 let capturing=false;
 chrome.runtime.onMessage.addListener((input:unknown,sender,reply)=>{
@@ -59,12 +62,36 @@ chrome.runtime.onMessage.addListener((input:unknown,sender,reply)=>{
    if(bitmap.width!==before.result.width||bitmap.height!==before.result.height)throw Error('Viewport changed.');
    const canvas=new OffscreenCanvas(64,64);const ctx=canvas.getContext('2d');if(!ctx)throw Error('Canvas unavailable.');
    ctx.drawImage(bitmap,32,32,64,64,0,0,64,64);
-   const png=await canvas.convertToBlob({type:'image/png'});
-   const bytes=new Uint8Array(await png.arrayBuffer());
+   const pngBlob=await canvas.convertToBlob({type:'image/png'});
+   const bytes=new Uint8Array(await pngBlob.arrayBuffer());
    if(bytes.length>75000)throw Error('Crop too large.');
-   return {kind:'local-preview',nonce,png:'data:image/png;base64,'+btoa(Array.from(bytes,byte=>String.fromCharCode(byte)).join('')),width:64,height:64};
+   const png='data:image/png;base64,'+btoa(Array.from(bytes,byte=>String.fromCharCode(byte)).join(''));
+   previews.set(tabId,{nonce,png,fingerprint:before.result.fingerprint});
+   return {kind:'local-preview',nonce,png,width:64,height:64};
   }finally{bitmap.close();}
  }
  void run().then(reply,()=>reply({error:'Local capture refused. Use the unchanged synthetic fixture at 100% scale.'})).finally(()=>{capturing=false;});
  return true;
 });
+
+const uploadMessage=z.object({kind:z.literal('suggest-fixture'),nonce:z.string().regex(/^[a-f0-9]{64}$/)}).strict();
+let uploading=false;
+chrome.runtime.onMessage.addListener((input:unknown,sender,reply)=>{
+ const parsed=uploadMessage.safeParse(input);
+ if(!parsed.success||sender.id!==chrome.runtime.id||sender.frameId!==0||sender.url!==fixtureUrl||sender.tab?.url!==fixtureUrl||sender.tab.id===undefined)return false;
+ const tabId=sender.tab.id;const preview=previews.get(tabId);previews.delete(tabId);
+ if(!preview||preview.nonce!==parsed.data.nonce||uploading){reply({error:'Preview expired.'});return false;}
+ const approvedPreview=preview;
+ uploading=true;
+ async function current(){const tab=await chrome.tabs.get(tabId);const [inspection]=await chrome.scripting.executeScript({target:{tabId},func:inspectFixture});if(!tab.active||tab.url!==fixtureUrl||inspection?.result?.fingerprint!==approvedPreview.fingerprint)throw Error('Fixture changed.');}
+ async function run(){
+  await ready;await current();
+  const stored=await chrome.storage.session.get('device');const device=credentialSchema.parse(stored.device);
+  const response=await fetch(appOrigin+'/api/extension/labels/suggest',{method:'POST',credentials:'omit',redirect:'error',headers:{'Content-Type':'application/json',Authorization:'Bearer '+device.credential,'x-clearcheckout':'1'},body:JSON.stringify({origin:appOrigin,fingerprint:labelFingerprint,nonce:approvedPreview.nonce,width:64,height:64,bounds:{x:32,y:32,width:64,height:64},png:approvedPreview.png}),signal:AbortSignal.timeout(10000)});
+  if(!response.ok)throw Error('Suggestion refused.');
+  const advice=labelAdvice.parse(await response.json());await current();return advice;
+ }
+ void run().then(reply,()=>reply({error:'Suggestion unavailable. Keep the label unknown.'})).finally(()=>{uploading=false;});return true;
+});
+chrome.tabs.onRemoved.addListener(id=>previews.delete(id));
+chrome.tabs.onUpdated.addListener((id,change)=>{if(change.status==='loading'||change.url)previews.delete(id);});

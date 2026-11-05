@@ -33,15 +33,17 @@ export async function handle(request:Request){
  const ip=ipKeyGenerator(peer);
  if(limit(ip,180,60000,headers))return new Response('Too many requests, please try again later.',{status:429,headers:new Headers([...headers,['Content-Type','text/html; charset=utf-8']])});
  const extensionExchange=path==='/api/extension/exchange';
+ const extensionLabels=path==='/api/extension/labels/suggest';
  const extensionOrigin=process.env.CC_APPROVED_EXTENSION_ID?`chrome-extension://${process.env.CC_APPROVED_EXTENSION_ID}`:undefined;
- const extensionRequest=extensionExchange&&extensionOrigin!==undefined&&request.headers.get('origin')===extensionOrigin;
- if(extensionRequest){headers.set('Access-Control-Allow-Origin',extensionOrigin);headers.set('Vary','Origin');headers.set('Access-Control-Allow-Methods','POST, OPTIONS');headers.set('Access-Control-Allow-Headers','Content-Type, x-clearcheckout');if(method==='OPTIONS')return new Response(null,{status:204,headers});}
+ const extensionRequest=(extensionExchange||extensionLabels)&&extensionOrigin!==undefined&&request.headers.get('origin')===extensionOrigin;
+ if(extensionRequest){headers.set('Access-Control-Allow-Origin',extensionOrigin);headers.set('Vary','Origin');headers.set('Access-Control-Allow-Methods','POST, OPTIONS');headers.set('Access-Control-Allow-Headers','Content-Type, x-clearcheckout, Authorization');if(method==='OPTIONS')return new Response(null,{status:204,headers});}
  const webhook=path==='/api/payments/webhook'&&method==='POST';
  const origin=request.headers.get('origin');const allowed=[process.env.PUBLIC_ORIGIN,...(process.env.PUBLIC_ORIGINS||'').split(',')].map(value=>value?.trim()).filter(Boolean);
  let verified=true;
  if(origin)try{const parsed=new URL(origin);verified=parsed.origin===origin&&(allowed.length?allowed.includes(origin):parsed.host===request.headers.get('host'));}catch{verified=false;}
  if(!webhook&&!extensionRequest&&!['GET','HEAD'].includes(method)&&(request.headers.get('x-clearcheckout')!=='1'||!verified))return reply({error:'Request origin could not be verified.'},403);
  service??=createService({approvedExtensionId:process.env.CC_APPROVED_EXTENSION_ID,sandbox:sandboxConfiguration(runtimeEnvironment),paymentProvider:runtimeEnvironment.NODE_ENV==='test'?globalThis.clearcheckoutTestPayment:undefined,mail:runtimeEnvironment.NODE_ENV==='test'?globalThis.clearcheckoutTestMail:undefined,appOrigin:process.env.PUBLIC_ORIGIN,dbPath:process.env.DB_PATH||'data/clearcheckout.sqlite',mediaOptions:{dataDir:nodePath.join(nodePath.dirname(process.env.DB_PATH||'data/clearcheckout.sqlite'),'media')}});
+ if(extensionLabels&&method==='POST')return reply(await service.labels.suggest(request.headers.get('authorization')?.replace(/^Bearer /,'')||'',request.headers.get('origin'),body));
  if(extensionExchange&&method==='POST')return reply(service.devices.exchange(body,request.headers.get('origin')));
  if(webhook){await service.payments.webhook(request.headers,body);return reply({ok:true});}
  const token=request.headers.get('cookie')?.split(';').map(v=>v.trim()).find(v=>v.startsWith('cc_session='))?.slice(11);

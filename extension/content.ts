@@ -1,4 +1,5 @@
-import {fixtureUrl,previewResult} from './crop.js';
+import {labelAdvice} from '../shared/label-suggestion.js';
+import {fixtureUrl,previewResult,inspectFixture} from './crop.js';
 import {scan,repair,observeRepairs,clearRepairs,runCommand,keyboardCommand} from '../shared/dom.js';
 const existingHost=document.getElementById('clearcheckout-host');
 if(existingHost) existingHost.dispatchEvent(new Event('clearcheckout-close'));
@@ -17,15 +18,26 @@ const close=()=>{closed=true;stop();clearRepairs(document);document.removeEventL
 if(location.href===fixtureUrl){
  const capture=document.createElement('button');capture.textContent='Preview synthetic crop locally';
  const preview=document.createElement('img');preview.alt='Local synthetic control crop. No upload.';preview.hidden=true;
- const warning=document.createElement('p');warning.textContent='Uploads and suggestions remain disabled. This preview stays local.';
- element('status').after(capture,preview,warning);
+ const warning=document.createElement('p');warning.textContent='Synthetic fixture only. Preview stays local until you explicitly upload. Suggestions require your review.';
+ const upload=document.createElement('button');upload.textContent='Upload this synthetic crop for a suggestion';upload.hidden=true;
+ const accept=document.createElement('button');accept.textContent='Accept reviewed label';accept.hidden=true;
+ let pending:{nonce:string;target:HTMLButtonElement;markup:string}|undefined;let suggestion='';let owned:HTMLButtonElement|undefined;let ownedText='';
+ const reset=()=>{pending=undefined;suggestion='';upload.hidden=true;accept.hidden=true;preview.hidden=true;preview.removeAttribute('src');};
+ const undo=()=>{if(owned?.getAttribute('aria-label')===ownedText)owned.removeAttribute('aria-label');owned=undefined;};
+ const observer=new MutationObserver(()=>{if(pending&&(!inspectFixture()||!pending.target.isConnected||pending.target.outerHTML!==pending.markup||location.href!==fixtureUrl)){reset();announce('Fixture changed. Preview and suggestion cleared.');}});observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,characterData:true});
+ host.addEventListener('clearcheckout-close',()=>{observer.disconnect();undo();reset();});
+ element('close').addEventListener('click',()=>{observer.disconnect();undo();reset();});
+ upload.onclick=async()=>{const value=pending;if(!value)return;upload.hidden=true;try{const advice=labelAdvice.parse(await chrome.runtime.sendMessage({kind:'suggest-fixture',nonce:value.nonce}));if(closed||pending!==value||!value.target.isConnected||value.target.outerHTML!==value.markup)return;announce('Possible label: '+advice.text+'. Review before accepting.');if(advice.text.toLowerCase()!=='unknown'){suggestion=advice.text;accept.hidden=false;}}catch{if(!closed)announce('Suggestion unavailable. Keep the label unknown.');}};
+ accept.onclick=()=>{const value=pending;if(!value||!suggestion||!value.target.isConnected||value.target.outerHTML!==value.markup)return;owned=value.target;ownedText=suggestion;pending=undefined;owned.setAttribute('aria-label',ownedText);accept.hidden=true;announce('Reviewed label applied. Close assistance to undo owned labels.');};
+ element('status').after(capture,preview,warning,upload,accept);
  capture.onclick=async()=>{
-  preview.hidden=true;preview.removeAttribute('src');capture.disabled=true;
+  reset();capture.disabled=true;
   const nonce=Array.from(crypto.getRandomValues(new Uint8Array(32)),byte=>byte.toString(16).padStart(2,'0')).join('');
   try{
    const result=previewResult.safeParse(await chrome.runtime.sendMessage({kind:'crop-preview',nonce}));
    if(closed)return;
    if(!result.success||result.data.nonce!==nonce)throw Error('Capture refused.');
+   const target=document.getElementById('fixture-control');if(!(target instanceof HTMLButtonElement))throw Error('Fixture changed.');pending={nonce,target,markup:target.outerHTML};upload.hidden=false;
    preview.src=result.data.png;preview.hidden=false;announce('Local preview ready. Nothing uploaded.');
   }catch{if(!closed)announce('Local capture refused. Fixture may be unsafe or changed.');}
   finally{capture.disabled=false;}

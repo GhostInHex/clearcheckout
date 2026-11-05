@@ -1,0 +1,12 @@
+{
+  "status": "Local preview ready. Nothing uploaded.",
+  "pngBytes": 502,
+  "permissions": {
+    "origins": [],
+    "permissions": [
+      "activeTab",
+      "storage",
+      "scripting"
+    ]
+  }
+}

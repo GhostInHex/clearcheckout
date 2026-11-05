@@ -1,3 +1,4 @@
+import {createLabelSuggestions} from './label-suggestions.js';
 import {createExtensionDevices} from './extension-devices.js';
 import {createAuth,hashPassword,checkPassword,type MailAdapter} from './auth.js';
 import {createSandboxPayPal,type SandboxConfig} from './paypal.js';
@@ -94,6 +95,7 @@ export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,medi
     try {const next=transition(value,action);if(action.type==='change' || action.type==='cancel' || action.type==='confirm')payments.invalidate(id);return save({...next,id:value.id},user);}catch(error){fail(409,error instanceof Error ? error.message : String(error));}
   });
   const devices=createExtensionDevices(db,{approvedId:approvedExtensionId,fail});
+  const labels=createLabelSuggestions(db,devices,aiOptions);
   const auth=createAuth(db,{mail,origin:appOrigin});
-  return {db,devices,auth,ai,media,payments,publicUser,authenticate,issueSession,signup,login,logout,setPreferences,orders,order,createOrder,updateOrder};
+  return {db,devices,labels,auth,ai,media,payments,publicUser,authenticate,issueSession,signup,login,logout,setPreferences,orders,order,createOrder,updateOrder};
 }
