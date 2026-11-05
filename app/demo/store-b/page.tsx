@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
+import LabelMemory from '../../../src/LabelMemory';
 import Link from 'next/link';
 import {serveMerchantCart,sameReview,type CartSnapshot} from '../../../shared/merchant-cart';
 import {repair,clearRepairs,runCommand} from '../../../shared/dom';
@@ -37,5 +38,5 @@ export default function StoreB(){
  <section data-checkout-delivery tabIndex={-1}><h2>Delivery</h2><input data-checkout-label="Delivery instructions"/></section>
  <section data-checkout-review tabIndex={-1}><h2>Review</h2><button data-checkout-label="Read demo summary" onClick={()=>setPromo(true)}></button></section>
  <nav aria-label="Guided checkout">{['cart','delivery','review','back'].map(command=><button key={command} onClick={()=>setNotice(runCommand(document,command))}>{command==='back'?'Previous guided step':`Go to ${command}`}</button>)}</nav><button onClick={()=>repair(document)}>Repair reliable labels</button><button onClick={()=>clearRepairs(document)}>Clear local repairs</button>
- <p>Only merchant-marked missing names can be repaired. Keyboard alternatives are provided by this controlled merchant.</p></main>;
+ <LabelMemory announce={setNotice}/><p>Only merchant-marked missing names can be repaired. Keyboard alternatives are provided by this controlled merchant.</p></main>;
 }

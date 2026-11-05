@@ -1,3 +1,4 @@
+import {mountLabelMemory} from '../shared/label-memory.js';
 import {cartCapability,type CartReview} from '../shared/merchant-cart.js';
 import {appOrigin} from './link.js';
 import {z} from 'zod';
@@ -41,8 +42,10 @@ const renderCart=async()=>{
  });}
 };
 if(location.origin===appOrigin&&['/demo','/demo/store-b'].includes(location.pathname))cartButton('Read controlled cart',()=>{void renderCart();});
+const forgetMemory=location.origin===appOrigin&&['/demo','/demo/store-b'].includes(location.pathname)?mountLabelMemory(sectionForMemory(),document,announce):()=>{};
+function sectionForMemory(){const section=root.querySelector('section');if(!section)throw Error('Missing panel');return section;}
 let closed=false;
-const close=()=>{closed=true;if(speak&&'speechSynthesis' in window)speechSynthesis.cancel();stop();clearRepairs(document);document.removeEventListener('keydown',keyboard);host.remove();if(previousFocus instanceof HTMLElement && previousFocus.isConnected)previousFocus.focus();};element('close').onclick=close;host.addEventListener('clearcheckout-close',close);
+const close=()=>{closed=true;forgetMemory();if(speak&&'speechSynthesis' in window)speechSynthesis.cancel();stop();clearRepairs(document);document.removeEventListener('keydown',keyboard);host.remove();if(previousFocus instanceof HTMLElement && previousFocus.isConnected)previousFocus.focus();};element('close').onclick=close;host.addEventListener('clearcheckout-close',close);
 if(location.href===fixtureUrl){
  const capture=document.createElement('button');capture.textContent='Preview synthetic crop locally';
  const preview=document.createElement('img');preview.alt='Local synthetic control crop. No upload.';preview.hidden=true;
