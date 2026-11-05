@@ -49,12 +49,11 @@ if(location.href===fixtureUrl){
 element('close').focus();
 const large=element('large');if(!(large instanceof HTMLInputElement))throw new Error('Missing text size input');
 const section=root.querySelector('section');if(!section)throw new Error('Missing panel section');const speech=element('speech');if(!(speech instanceof HTMLInputElement))throw new Error('Missing speech input');
-const preferenceKey='clearcheckout.preferences.'+location.origin;
+const preferenceKey='clearcheckout.preferences.v1';
 const preferences=z.object({large:z.boolean(),expires:z.number().finite()}).strict();
 const applyLarge=()=>{section.style.fontSize=large.checked?'20px':'16px';};
-chrome.storage.local.get(preferenceKey).then(value=>{if(closed)return;const saved=preferences.safeParse(value[preferenceKey]);if(saved.success&&saved.data.expires>Date.now()){large.checked=saved.data.large;applyLarge();}else chrome.storage.local.remove(preferenceKey);});
-let preferenceWrite=Promise.resolve();
-large.onchange=()=>{preferenceWrite=preferenceWrite.then(async()=>{applyLarge();const selected=large.checked;const all=await chrome.storage.local.get(null);const entries=Object.entries(all).filter(([key])=>key.startsWith('clearcheckout.preferences.'));const valid=entries.flatMap(([key,value])=>{const parsed=preferences.safeParse(value);return parsed.success&&parsed.data.expires>Date.now()&&key!==preferenceKey?[{key,expires:parsed.data.expires}]:[];}).sort((a,b)=>b.expires-a.expires).slice(0,31);const keep=new Set(valid.map(entry=>entry.key));await chrome.storage.local.remove(entries.filter(([key])=>!keep.has(key)).map(([key])=>key));await chrome.storage.local.set({[preferenceKey]:{large:selected,expires:Date.now()+30*24*60*60*1000}});});};
+try{const saved=preferences.safeParse(JSON.parse(localStorage.getItem(preferenceKey)??'null'));if(saved.success&&saved.data.expires>Date.now()){large.checked=saved.data.large;applyLarge();}else localStorage.removeItem(preferenceKey);}catch{announce('Local preferences unavailable. Assistance still works.');}
+large.onchange=()=>{applyLarge();try{localStorage.setItem(preferenceKey,JSON.stringify({large:large.checked,expires:Date.now()+30*24*60*60*1000}));}catch{announce('Text size changed for this opening. Local saving unavailable.');}};
 speech.onchange=()=>{speak=speech.checked;if(!speak&&'speechSynthesis' in window)speechSynthesis.cancel();};
-element('reset-preferences').onclick=()=>{large.checked=false;speech.checked=false;speak=false;applyLarge();if('speechSynthesis' in window)speechSynthesis.cancel();preferenceWrite=preferenceWrite.then(()=>chrome.storage.local.remove(preferenceKey));announce('Local preferences for this origin reset. App speech is off.');};
+element('reset-preferences').onclick=()=>{large.checked=false;speech.checked=false;speak=false;applyLarge();if('speechSynthesis' in window)speechSynthesis.cancel();try{localStorage.removeItem(preferenceKey);announce('Local preferences for this origin reset. App speech is off.');}catch{announce('App speech is off. Local preference reset unavailable.');}};
 }

@@ -9,7 +9,7 @@ const folder=mkdtempSync(`${tmpdir()}/cc-p10-`);
 const ext=`${folder}/extension`;cpSync(resolve('build/extension'),ext,{recursive:true});
 const manifest=z.object({host_permissions:z.array(z.string()).default([])}).passthrough().parse(JSON.parse(readFileSync(`${ext}/manifest.json`,'utf8')));
 manifest.host_permissions=[`${fixture.base}/*`];writeFileSync(`${ext}/manifest.json`,JSON.stringify(manifest));
-const context=await chromium.launchPersistentContext(`${folder}/profile`,{channel:'chromium',headless:true,args:[`--disable-extensions-except=${ext}`,`--load-extension=${ext}`]});
+const context=await chromium.launchPersistentContext(`${folder}/profile`,{channel:'chromium',headless:true,recordVideo:{dir:resolve('artifacts/program/P10/review')},args:[`--disable-extensions-except=${ext}`,`--load-extension=${ext}`]});
 try{
  const worker=context.serviceWorkers()[0]??await context.waitForEvent('serviceworker');
  const page=await context.newPage();await page.goto(fixture.base+'/demo/store-b');
@@ -23,6 +23,10 @@ try{
  await expect(page.locator('input[data-checkout-label]')).not.toHaveAttribute('aria-label');
  await expect(page.getByLabel('Speak app announcements')).not.toBeChecked();
  await page.getByLabel('Larger panel text').check();
+ await page.getByRole('button',{name:'Close assistance'}).click();
+ await page.reload();
+ await worker.evaluate(async()=>{const tabs=await chrome.tabs.query({});const tab=tabs.find(value=>value.url?.includes('/demo/store-b'));if(tab?.id===undefined)throw Error('Missing store tab');await chrome.scripting.executeScript({target:{tabId:tab.id},files:['content.js']});});
+ await expect(page.getByLabel('Larger panel text')).toBeChecked();
  await page.getByRole('button',{name:'Reset local preferences for this origin'}).click();
  await expect(page.getByLabel('Larger panel text')).not.toBeChecked();
  mkdirSync('artifacts/program/P10/review',{recursive:true});
