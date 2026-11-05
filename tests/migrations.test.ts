@@ -21,7 +21,7 @@ test('fresh installation and populated v1 preserve all durable rows on reopen',a
   service.db.prepare('UPDATE ai_safety SET blocked=1').run();
   const tables=['users','sessions','orders','ai_calls','ai_safety'];
   const before=tables.map(table=>service.db.prepare(`SELECT * FROM ${table}`).all());
-  service.db.exec('DROP TABLE payment_attempts; DROP TABLE account_tokens; DROP TABLE account_mail_limits; ALTER TABLE users DROP COLUMN email_verified; DROP TABLE schema_migrations; PRAGMA user_version=1');
+  service.db.exec('DROP TABLE payment_attempts; DROP TABLE account_tokens; DROP TABLE account_mail_limits; ALTER TABLE users DROP COLUMN email_verified; ALTER TABLE users DROP COLUMN auth_generation; DROP TABLE schema_migrations; PRAGMA user_version=1');
   service.db.close();
   for(let i=0;i<2;i++){
    const reopened=createService({dbPath:file});

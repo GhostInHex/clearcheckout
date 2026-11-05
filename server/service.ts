@@ -58,8 +58,9 @@ export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,medi
     const {email,password}=credentialsSchema.parse(input);
     const row=db.prepare('SELECT * FROM users WHERE email=?').get(email);
     const user=row ? userSchema.parse(row) : undefined;
+    const generation=row?z.object({auth_generation:z.number()}).parse(row).auth_generation:undefined;
     const valid=await checkPassword(password,user?.password || `${'0'.repeat(32)}:${'0'.repeat(128)}`);
-    if(!user || !valid)fail(401,'Email or password is incorrect.');
+    if(!user || !valid || !db.prepare('SELECT id FROM users WHERE id=? AND password=? AND auth_generation=?').get(user.id,user.password,generation))fail(401,'Email or password is incorrect.');
     return publicUser(user);
   }
   function logout(token:string|undefined) {if(token)db.prepare('DELETE FROM sessions WHERE token=?').run(digest(token));}

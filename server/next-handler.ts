@@ -1,4 +1,7 @@
 import 'server-only';
+import {env as runtimeEnvironment} from 'node:process';
+import type {MailAdapter} from './auth.js';
+declare global {var clearcheckoutTestMail:MailAdapter|undefined;}
 import {createService,ServiceError} from './service.js';
 import {preferencesSchema,statusErrorSchema,json} from './contracts.js';
 import {checkoutEventSchema} from '../shared/checkout-schema.js';
@@ -31,7 +34,7 @@ export async function handle(request:Request){
  let verified=true;
  if(origin)try{const parsed=new URL(origin);verified=parsed.origin===origin&&(allowed.length?allowed.includes(origin):parsed.host===request.headers.get('host'));}catch{verified=false;}
  if(!['GET','HEAD'].includes(method)&&(request.headers.get('x-clearcheckout')!=='1'||!verified))return reply({error:'Request origin could not be verified.'},403);
- service??=createService({appOrigin:process.env.PUBLIC_ORIGIN,dbPath:process.env.DB_PATH||'data/clearcheckout.sqlite',mediaOptions:{dataDir:nodePath.join(nodePath.dirname(process.env.DB_PATH||'data/clearcheckout.sqlite'),'media')}});
+ service??=createService({mail:runtimeEnvironment.NODE_ENV==='test'?globalThis.clearcheckoutTestMail:undefined,appOrigin:process.env.PUBLIC_ORIGIN,dbPath:process.env.DB_PATH||'data/clearcheckout.sqlite',mediaOptions:{dataDir:nodePath.join(nodePath.dirname(process.env.DB_PATH||'data/clearcheckout.sqlite'),'media')}});
  const token=request.headers.get('cookie')?.split(';').map(v=>v.trim()).find(v=>v.startsWith('cc_session='))?.slice(11);
  const user=service.authenticate(token);
  if(method==='POST'&&(path==='/api/signup'||path==='/api/login')){
