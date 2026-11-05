@@ -16,17 +16,17 @@ test('fresh installation and populated v1 preserve all durable rows on reopen',(
   service.db.prepare("INSERT INTO orders VALUES('synthetic',?, ?,1)").run(user.id,JSON.stringify({history:['synthetic']}));
   service.db.prepare("INSERT INTO ai_calls VALUES('call',?,'cache',1,50000,'reserved',NULL,NULL,NULL)").run(user.id);
   service.db.prepare('UPDATE ai_safety SET blocked=1').run();
-  service.db.exec('DROP TABLE schema_migrations; PRAGMA user_version=1');
+  service.db.exec('DROP TABLE payment_attempts; DROP TABLE schema_migrations; PRAGMA user_version=1');
   const tables=['users','sessions','orders','ai_calls','ai_safety'];
   const before=tables.map(table=>service.db.prepare(`SELECT * FROM ${table}`).all());
   service.db.close();
   for(let i=0;i<2;i++){
    const reopened=createService({dbPath:file});
-   assert.equal(reopened.db.pragma('user_version',{simple:true}),2);
+   assert.equal(reopened.db.pragma('user_version',{simple:true}),3);
    assert.deepEqual(tables.map(table=>reopened.db.prepare(`SELECT * FROM ${table}`).all()),before);
    assert.equal(reopened.authenticate(token)?.id,user.id);
    assert.equal(reopened.login({email:user.email,password:'synthetic-password'}).id,user.id);
-   assert.equal(reopened.db.prepare('SELECT * FROM schema_migrations').all().length,2);
+   assert.equal(reopened.db.prepare('SELECT * FROM schema_migrations').all().length,3);
    reopened.db.close();
   }
  }finally{rmSync(dir,{recursive:true,force:true});}
@@ -60,6 +60,11 @@ test('concurrent writers recheck version after acquiring immediate lock',async()
   const done=new Promise<void>((resolve,reject)=>{worker.once('error',reject);worker.once('exit',code=>code===0?resolve():reject(Error(`worker ${code}`)));});
   await new Promise<void>((resolve,reject)=>{worker.once('message',()=>resolve());worker.once('error',reject);});
   db.exec(migrations[0]?.sql || '');db.pragma('user_version=1');db.exec('COMMIT');
-  await done;migrate(db);assert.equal(db.pragma('user_version',{simple:true}),2);
+  await done;migrate(db);assert.equal(db.pragma('user_version',{simple:true}),3);
  }finally{if(db.inTransaction)db.exec('ROLLBACK');db.close();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('version 2 upgrades to payment schema without altering orders',()=>{
+ const db=new Database(':memory:');
+ try{migrate(db,migrations.slice(0,2));db.prepare('INSERT INTO orders VALUES(?,?,?,?)').run('order','user','synthetic-body',1);migrate(db);migrate(db);assert.equal(db.pragma('user_version',{simple:true}),3);assert.deepEqual(db.prepare('SELECT * FROM orders').all(),[{id:'order',user_id:'user',body:'synthetic-body',created:1}]);assert.equal(db.prepare('SELECT * FROM payment_attempts').all().length,0);}finally{db.close();}
 });
