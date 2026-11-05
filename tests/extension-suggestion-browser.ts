@@ -35,7 +35,9 @@ try{
  execFileSync('xdotool',['key','alt+shift+y'],{env:{...process.env,DISPLAY:':1'}});
  await expect(page.getByRole('button',{name:'Preview synthetic crop locally'})).toBeVisible();
  assert.ok(await page.evaluate(inspectFixture));
- await page.getByRole('button',{name:'Preview synthetic crop locally'}).click();
+ await page.evaluate(()=>{const label=document.createElement('label');label.htmlFor='fixture-control';label.id='merchant-label';label.textContent='Merchant label';document.body.append(label);});
+ assert.equal(await page.evaluate(inspectFixture),null);await page.evaluate(()=>document.getElementById('merchant-label')?.remove());
+ await page.waitForTimeout(1100);await page.getByRole('button',{name:'Preview synthetic crop locally'}).click();
  await expect(page.getByRole('status')).toHaveText('Local preview ready. Nothing uploaded.');
  assert.equal(existsSync(folder+'/db.sqlite.labels'),false);
  await page.getByRole('button',{name:'Upload this synthetic crop for a suggestion'}).click();
@@ -44,18 +46,22 @@ try{
  await page.getByRole('button',{name:'Accept reviewed label'}).click();await expect(page.locator('#fixture-control')).toHaveAttribute('aria-label','Shopping cart');
  await page.getByRole('button',{name:'Close assistance'}).click();assert.equal(await page.locator('#fixture-control').getAttribute('aria-label'),null);
  execFileSync('xdotool',['key','alt+shift+y'],{env:{...process.env,DISPLAY:':1'}});
- await page.getByRole('button',{name:'Preview synthetic crop locally'}).click();await expect(page.getByRole('status')).toContainText('Local preview ready');
+ await page.waitForTimeout(1100);await page.getByRole('button',{name:'Preview synthetic crop locally'}).click();await expect(page.getByRole('status')).toContainText('Local preview ready');
  await page.evaluate(()=>document.getElementById('fixture-control')?.setAttribute('aria-label','Merchant name'));
  await expect(page.getByRole('status')).toContainText('Fixture changed');await expect(page.getByRole('button',{name:'Upload this synthetic crop for a suggestion'})).toBeHidden();
 
  await page.evaluate(()=>document.getElementById('fixture-control')?.removeAttribute('aria-label'));
- await page.getByRole('button',{name:'Preview synthetic crop locally'}).click();await expect(page.getByRole('status')).toContainText('Local preview ready');
+ await page.waitForTimeout(1100);await page.getByRole('button',{name:'Preview synthetic crop locally'}).click();await expect(page.getByRole('status')).toContainText('Local preview ready');
  await page.getByRole('button',{name:'Upload this synthetic crop for a suggestion'}).click();await expect(page.getByRole('status')).toContainText('Possible label: Shopping cart');
  assert.equal(readFileSync(folder+'/db.sqlite.labels','utf8').trim().split('\n').length,1);
  await account.getByRole('button',{name:'Refresh my devices'}).click();await account.getByRole('button',{name:/^Revoke [a-f0-9]/}).click();
- await page.bringToFront();await page.getByRole('button',{name:'Preview synthetic crop locally'}).click();await expect(page.getByRole('status')).toContainText('Local preview ready');
+ await page.bringToFront();await page.waitForTimeout(1100);await page.getByRole('button',{name:'Preview synthetic crop locally'}).click();await expect(page.getByRole('status')).toContainText('Local preview ready');
  await page.getByRole('button',{name:'Upload this synthetic crop for a suggestion'}).click();await expect(page.getByRole('status')).toContainText('Suggestion unavailable');
  assert.equal(readFileSync(folder+'/db.sqlite.labels','utf8').trim().split('\n').length,1);
+
+ await page.evaluate(()=>{const style=document.createElement('style');style.textContent='#fixture-control{background:red!important}';document.head.append(style);});
+ await page.waitForTimeout(1100);await page.getByRole('button',{name:'Preview synthetic crop locally'}).click();await expect(page.getByRole('status')).toContainText('Local capture refused');
+ assert.equal(readFileSync(folder+'/db.sqlite.labels','utf8').trim().split('\n').length,1);
  mkdirSync('artifacts/program/P09/toolbar-provider',{recursive:true});await page.screenshot({path:'artifacts/program/P09/toolbar-provider/review-clear.png'});
- writeFileSync('artifacts/program/P09/toolbar-provider/installed.json',JSON.stringify({installed:true,actualNext:true,method:'scratch standard _execute_action keyboard command through xdotool',noEarlyUpload:true,accepted:true,closeUndo:true,merchantInvalidation:true,cache:true,revoke:true,payload:JSON.parse(payload.trim())},null,2));
+ writeFileSync('artifacts/program/P09/toolbar-provider/installed.json',JSON.stringify({installed:true,actualNext:true,method:'scratch standard _execute_action keyboard command through xdotool',noEarlyUpload:true,accepted:true,closeUndo:true,merchantInvalidation:true,cache:true,revoke:true,alteredPixelsRefused:true,payload:JSON.parse(payload.trim())},null,2));
 }finally{await context.close();if(server&&server.exitCode===null){server.kill('SIGTERM');await once(server,'exit');}rmSync(folder,{recursive:true,force:true});}

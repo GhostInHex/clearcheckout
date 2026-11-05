@@ -7,6 +7,7 @@ export function inspectFixture(){
  if(location.href!=='http://localhost:4319/fixtures/label-crop.html'||window.top!==window||window.devicePixelRatio!==1||window.scrollX!==0||window.scrollY!==0)return null;
  const target=document.getElementById('fixture-control');
  if(!(target instanceof HTMLButtonElement)||target.outerHTML!=='<button id="fixture-control" type="button"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 8h24l-3 14H8z" fill="#193e35"></path></svg></button>')return null;
+ if(target.labels?.length)return null;
  const box=target.getBoundingClientRect();
  if(box.x!==32||box.y!==32||box.width!==64||box.height!==64||innerWidth<128||innerHeight<128)return null;
  const style=getComputedStyle(target);

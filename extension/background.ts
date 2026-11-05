@@ -33,7 +33,7 @@ chrome.runtime.onMessage.addListener((input:unknown,sender,reply)=>{
  return true;
 });
 
-import {labelAdvice,labelFingerprint} from '../shared/label-suggestion.js';
+import {labelAdvice,labelFingerprint,fixturePngSha} from '../shared/label-suggestion.js';
 import {z} from 'zod';
 const previews=new Map<number,{nonce:string;png:string;fingerprint:string}>();
 import {cropRequest,fixtureUrl,inspectFixture} from './crop.js';
@@ -64,7 +64,9 @@ chrome.runtime.onMessage.addListener((input:unknown,sender,reply)=>{
    ctx.drawImage(bitmap,32,32,64,64,0,0,64,64);
    const pngBlob=await canvas.convertToBlob({type:'image/png'});
    const bytes=new Uint8Array(await pngBlob.arrayBuffer());
-   if(bytes.length>75000)throw Error('Crop too large.');
+   if(bytes.length!==502)throw Error('Unexpected fixture bytes.');
+   const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),byte=>byte.toString(16).padStart(2,'0')).join('');
+   if(digest!==fixturePngSha)throw Error('Fixture pixels changed.');
    const png='data:image/png;base64,'+btoa(Array.from(bytes,byte=>String.fromCharCode(byte)).join(''));
    previews.set(tabId,{nonce,png,fingerprint:before.result.fingerprint});
    return {kind:'local-preview',nonce,png,width:64,height:64};

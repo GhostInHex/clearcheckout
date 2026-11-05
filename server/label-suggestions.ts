@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto';
 import {z} from 'zod';
-import {labelUpload,labelAdvice,labelModel} from '../shared/label-suggestion.js';
+import {labelUpload,labelAdvice,labelModel,fixturePngSha} from '../shared/label-suggestion.js';
 import {createLedger} from './ai-ledger.js';
 import {metaConfig} from './meta-ai.js';
 import {fail,json,type Db,type ProviderOptions} from './contracts.js';
@@ -14,7 +14,7 @@ export function createLabelSuggestions(db:Db,devices:ReturnType<typeof createExt
   const upload=labelUpload.parse(input);
   const encoded=upload.png.slice('data:image/png;base64,'.length);
   const bytes=Buffer.from(encoded,'base64');
-  if(bytes.toString('base64')!==encoded||bytes.length!==502||digest(bytes)!=='71f5883a37ac21bd54c1cf077e02373c2997b606ef3f73ba1e67ded7c459765e')fail(400,'Only the exact trusted synthetic fixture PNG is accepted.');
+  if(bytes.toString('base64')!==encoded||bytes.length!==502||digest(bytes)!==fixturePngSha)fail(400,'Only the exact trusted synthetic fixture PNG is accepted.');
   if(!config.key)fail(503,'Fixture suggestions are not configured.');
   const key=digest(JSON.stringify([upload.origin,upload.fingerprint,labelModel,instructions,digest(bytes)]));
   const reservation=reserve.immediate(device.user_id,key);
