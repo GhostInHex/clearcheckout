@@ -1,3 +1,5 @@
+import {parseCommand} from './commands.js';
+import {merchantAdapter} from './merchants.js';
 const selector = 'button, input:not([type=hidden]), select, textarea, a[href], [role=button], [role=slider], [role=checkbox]';
 type Provenance = 'merchant' | 'accessible-name' | 'unknown';
 export interface Control {
@@ -125,10 +127,11 @@ export function clearRepairs(root: ParentNode) {
   }
 }
 export function runCommand(root: ParentNode | null, command: string) {
-  const targets: Record<string,string>={cart:'[data-checkout-cart]',delivery:'[data-checkout-delivery]',review:'[data-checkout-review]'};
-  const target=root?.querySelector(targets[command] || '[data-command-never]');
-  if(!target || !isHtml(target)) return 'That section is not available on this page. No action was taken.';
-  target.focus(); return `Moved to ${command}. Review the details before taking an action.`;
+  const parsed=parseCommand(command);
+  if(parsed.kind==='undo-local-repair' && root){clearRepairs(root);return 'Owned local labels undone. Merchant changes are preserved.';}
+  if(parsed.kind!=='navigate'||!root)return 'Command unavailable. No action was taken.';
+  if(!merchantAdapter(root).navigate(parsed.destination))return 'That section is not available on this page. No action was taken.';
+  return `Moved to ${parsed.destination}. Review the details before taking an action.`;
 }
 export function keyboardCommand(event: KeyboardEvent) {
   if(!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) return null;

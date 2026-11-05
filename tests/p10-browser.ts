@@ -1,0 +1,31 @@
+import {chromium,expect} from '@playwright/test';
+import {resolve} from 'node:path';
+import {mkdtempSync,rmSync,cpSync,readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {z} from 'zod';
+import {nextFixture} from './next-fixture.js';
+const fixture=await nextFixture();
+const folder=mkdtempSync(`${tmpdir()}/cc-p10-`);
+const ext=`${folder}/extension`;cpSync(resolve('build/extension'),ext,{recursive:true});
+const manifest=z.object({host_permissions:z.array(z.string()).default([])}).passthrough().parse(JSON.parse(readFileSync(`${ext}/manifest.json`,'utf8')));
+manifest.host_permissions=[`${fixture.base}/*`];writeFileSync(`${ext}/manifest.json`,JSON.stringify(manifest));
+const context=await chromium.launchPersistentContext(`${folder}/profile`,{channel:'chromium',headless:true,args:[`--disable-extensions-except=${ext}`,`--load-extension=${ext}`]});
+try{
+ const worker=context.serviceWorkers()[0]??await context.waitForEvent('serviceworker');
+ const page=await context.newPage();await page.goto(fixture.base+'/demo/store-b');
+ await worker.evaluate(async()=>{const tabs=await chrome.tabs.query({});const tab=tabs.find(value=>value.url?.includes('/demo/store-b'));if(tab?.id===undefined)throw Error('Missing store tab');await chrome.scripting.executeScript({target:{tabId:tab.id},files:['content.js']});});
+ await page.getByRole('button',{name:'Go to delivery'}).click();
+ await expect(page.locator('[data-checkout-delivery]')).toBeFocused();
+ await page.keyboard.press('Alt+Shift+C');await expect(page.locator('[data-checkout-cart]')).toBeFocused();
+ await page.getByRole('button',{name:'Repair reliable labels',exact:true}).last().click();
+ await expect(page.locator('input[data-checkout-label]')).toHaveAccessibleName('Delivery instructions');
+ await page.getByRole('button',{name:'Undo local repairs',exact:true}).click();
+ await expect(page.locator('input[data-checkout-label]')).not.toHaveAttribute('aria-label');
+ await expect(page.getByLabel('Speak app announcements')).not.toBeChecked();
+ await page.getByLabel('Larger panel text').check();
+ await page.getByRole('button',{name:'Reset local preferences for this origin'}).click();
+ await expect(page.getByLabel('Larger panel text')).not.toBeChecked();
+ mkdirSync('artifacts/program/P10/review',{recursive:true});
+ await page.screenshot({path:'artifacts/program/P10/review/store-b-navigation-undo.png'});
+ console.log('PASS installed MV3 Store B navigation, keyboard focus, owned undo, speech default and preference reset. Test-only localhost host grant; no toolbar or real AT claim.');
+}finally{await context.close();await fixture.close();rmSync(folder,{recursive:true,force:true});}
