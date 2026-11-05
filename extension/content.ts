@@ -1,5 +1,4 @@
-import {type CartReview} from '../shared/merchant-cart.js';
-import {cartCapability} from '../shared/merchants.js';
+import {cartCapability,type CartReview} from '../shared/merchant-cart.js';
 import {appOrigin} from './link.js';
 import {z} from 'zod';
 import {labelAdvice} from '../shared/label-suggestion.js';

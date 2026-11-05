@@ -1,7 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {cartRequest,sameReview,type CartSnapshot} from '../shared/merchant-cart.js';
-import {cartCapability} from '../shared/merchants.js';
+import {cartCapability,cartRequest,sameReview,type CartSnapshot} from '../shared/merchant-cart.js';
 const item={id:'bottle',name:'Trail bottle',quantity:1};
 const cart:CartSnapshot={store:'store-b',revision:1,items:[item],total:{amount:1200,currency:'USD',provenance:'client-local'}};
 test('removal binds revision, identity, quantity, total and unique selection',()=>{

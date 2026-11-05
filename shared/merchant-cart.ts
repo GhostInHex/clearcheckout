@@ -36,3 +36,11 @@ export async function requestMerchantCart(request:CartRequest):Promise<CartResul
   window.postMessage({channel:'clearcheckout-cart-v1',request},location.origin,[channel.port2]);
  });
 }
+
+export type CartCapability =
+ | {kind:'navigation-only';capabilities:readonly ['scan','navigate']}
+ | {kind:'controlled-store';store:'store-a'|'store-b';capabilities:readonly ['scan','navigate','read-cart','review-removal'];request:typeof requestMerchantCart};
+export function cartCapability(url:URL,controlledOrigin:string):CartCapability {
+ if(url.origin!==controlledOrigin||!['/demo','/demo/store-b'].includes(url.pathname))return {kind:'navigation-only',capabilities:['scan','navigate']};
+ return {kind:'controlled-store',store:url.pathname==='/demo'?'store-a':'store-b',capabilities:['scan','navigate','read-cart','review-removal'],request:requestMerchantCart};
+}
