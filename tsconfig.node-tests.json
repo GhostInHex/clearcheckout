@@ -7,6 +7,7 @@
     "tests/*.test.ts",
     "server/**/*.ts",
     "scripts/verify-compiled-server.ts",
-    "tests/node-helpers.ts"
+    "tests/node-helpers.ts",
+    "scripts/verify.ts"
   ]
 }

@@ -1,3 +1,4 @@
+import {migrate} from './migrations/index.js';
 import Database from 'better-sqlite3';
 import {randomBytes, scryptSync, timingSafeEqual, createHash} from 'node:crypto';
 import {mkdirSync} from 'node:fs';
@@ -18,11 +19,13 @@ const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
 export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,mediaOptions}:ServiceOptions={}) {
   if (dbPath !== ':memory:') mkdirSync(path.dirname(dbPath),{recursive:true});
   const db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.exec(`CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT UNIQUE NOT NULL,password TEXT NOT NULL,preferences TEXT NOT NULL,onboarded INTEGER DEFAULT 0);
-    CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id TEXT NOT NULL,expires INTEGER NOT NULL);
-    CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,body TEXT NOT NULL,created INTEGER NOT NULL);
-    PRAGMA user_version = 1;`);
+  try {
+    migrate(db);
+    db.pragma('journal_mode = WAL');
+  } catch(error) {
+    db.close();
+    throw error;
+  }
   const ai=createMetaGuidance(db,aiOptions);
   const media=createMedia(db,mediaOptions || aiOptions);
 
