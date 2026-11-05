@@ -1,3 +1,6 @@
+import {type CartReview} from '../shared/merchant-cart.js';
+import {cartCapability} from '../shared/merchants.js';
+import {appOrigin} from './link.js';
 import {z} from 'zod';
 import {labelAdvice} from '../shared/label-suggestion.js';
 import {fixtureUrl,previewResult,inspectFixture} from './crop.js';
@@ -15,6 +18,30 @@ element('scan').onclick=()=>{const findings=scan(document);announce(`${findings.
 element('repair').onclick=()=>{const result=repair(document);stop();stop=observeRepairs(document);announce(`${result.repaired} labels repaired. ${result.unknown} unknown controls unchanged. Repairs stay active.`);};
 const keyboard=(e:KeyboardEvent)=>{const command=keyboardCommand(e);if(command){e.preventDefault();announce(runCommand(document,command));}};document.addEventListener('keydown',keyboard);
 root.querySelectorAll('[data-command]').forEach(button=>{if(button instanceof HTMLButtonElement)button.onclick=()=>{if(button.dataset.command==='undo local repair')stop();announce(runCommand(document,button.dataset.command ?? ''));};});
+const cartControls=document.createElement('div');element('status').after(cartControls);
+let pendingReview:CartReview|null=null;
+const controlledCart=()=>cartCapability(new URL(location.href),appOrigin);
+const cartButton=(name:string,action:()=>void)=>{const button=document.createElement('button');button.textContent=name;button.onclick=action;cartControls.append(button);return button;};
+const cartSummary=(cart:CartReview['cart'])=>`${cart.total.provenance==='first-party-api'?'First-party API':'Client-local'} total ${(cart.total.amount/100).toFixed(2)} ${cart.total.currency}, revision ${cart.revision}.`;
+const renderCart=async()=>{
+ pendingReview=null;cartControls.replaceChildren();
+ const adapter=controlledCart();
+ if(adapter.kind!=='controlled-store'){announce('Unsupported merchant. Scan and navigation only.');return;}
+ const result=await adapter.request({kind:'read'});
+ if(result.kind==='refused'){announce(result.reason);return;}
+ announce(cartSummary(result.cart));
+ for(const item of result.cart.items){cartButton(`Review removal of ${item.name}`,()=>{
+  pendingReview={cart:result.cart,item};cartControls.replaceChildren();
+  announce(`Remove all ${item.quantity} units of ${item.name}? ${cartSummary(result.cart)} Cart changes require a new review. Label undo cannot restore removed items.`);
+  const confirm=cartButton(`Confirm removal of ${item.name}`,()=>{
+   const review=pendingReview;if(!review)return;pendingReview=null;cartControls.replaceChildren();
+   const current=controlledCart();if(current.kind!=='controlled-store'||current.store!==review.cart.store){announce('Merchant changed. Review again.');return;}
+   void current.request({kind:'remove',review}).then(value=>{announce(value.kind==='refused'?value.reason:`Selected item removed. ${cartSummary(value.cart)} No purchase occurred.`);cartButton('Read controlled cart',()=>{void renderCart();}).focus();});
+  });
+  cartButton('Cancel removal',()=>{pendingReview=null;cartControls.replaceChildren();announce('Removal cancelled. Cart unchanged.');cartButton('Read controlled cart',()=>{void renderCart();}).focus();});confirm.focus();
+ });}
+};
+if(location.origin===appOrigin&&['/demo','/demo/store-b'].includes(location.pathname))cartButton('Read controlled cart',()=>{void renderCart();});
 let closed=false;
 const close=()=>{closed=true;if(speak&&'speechSynthesis' in window)speechSynthesis.cancel();stop();clearRepairs(document);document.removeEventListener('keydown',keyboard);host.remove();if(previousFocus instanceof HTMLElement && previousFocus.isConnected)previousFocus.focus();};element('close').onclick=close;host.addEventListener('clearcheckout-close',close);
 if(location.href===fixtureUrl){

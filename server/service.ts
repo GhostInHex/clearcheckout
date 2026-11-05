@@ -78,6 +78,7 @@ export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,medi
     if(!row)fail(404,'Order not found.');
     return orderSchema.parse(json(bodySchema.parse(row).body));
   }
+  function readOrder(user:User,id:string){const value=order(user,id);return checkoutResponseSchema.parse({...value,quote:quote(value.cart,value.delivery),phrase:confirmationPhrase(value)});}
   function save(value:Order & {id:string},user:User) {
     db.prepare('UPDATE orders SET body=? WHERE id=? AND user_id=?').run(JSON.stringify(value),value.id,user.id);
     return checkoutResponseSchema.parse({...value,quote:quote(value.cart,value.delivery),phrase:confirmationPhrase(value)});
@@ -97,5 +98,5 @@ export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,medi
   const devices=createExtensionDevices(db,{approvedId:approvedExtensionId,fail});
   const labels=createLabelSuggestions(db,devices,aiOptions);
   const auth=createAuth(db,{mail,origin:appOrigin});
-  return {db,devices,labels,auth,ai,media,payments,publicUser,authenticate,issueSession,signup,login,logout,setPreferences,orders,order,createOrder,updateOrder};
+  return {db,devices,labels,auth,ai,media,payments,publicUser,authenticate,issueSession,signup,login,logout,setPreferences,orders,order,readOrder,createOrder,updateOrder};
 }

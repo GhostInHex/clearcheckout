@@ -1,7 +1,8 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
-import {repair,clearRepairs} from '../../../shared/dom';
+import {serveMerchantCart,sameReview,type CartSnapshot} from '../../../shared/merchant-cart';
+import {repair,clearRepairs,runCommand} from '../../../shared/dom';
 export default function StoreB(){
  const current=useRef({revision:1,quantity:1});
  const [quantity,renderQuantity]=useState(1);
@@ -14,6 +15,13 @@ export default function StoreB(){
   if(!review||review.revision!==current.current.revision||review.quantity!==current.current.quantity){setNotice('Cart changed. Review the current item again.');setReview(null);return;}
   setQuantity(0);setReview(null);setNotice('Trail bottle removed. Cart is empty. Total $0. No purchase occurred.');
  }
+ useEffect(()=>serveMerchantCart(async request=>{
+  const cart:CartSnapshot={store:'store-b',revision:current.current.revision,items:current.current.quantity?[{id:'bottle',name:'Trail bottle',quantity:current.current.quantity}]:[],total:{amount:current.current.quantity*1200,currency:'USD',provenance:'client-local'}};
+  if(request.kind==='read')return {kind:'cart',cart};
+  if(!sameReview(cart,request.review))return {kind:'refused',reason:'Cart changed or item mismatched. Review again.'};
+  setQuantity(0);setReview(null);setNotice('Trail bottle removed. No purchase occurred.');
+  return {kind:'cart',cart:{...cart,revision:current.current.revision,items:[],total:{...cart.total,amount:0}}};
+ }),[]);
  const [promo,setPromo]=useState(false);
  return <main><h1>Store B · Trail supplies</h1><nav><Link href="/demo">Store A</Link></nav><p>Controlled local demo. No purchase or upload occurs.</p>
  <section data-checkout-cart tabIndex={-1}><h2>Cart</h2><p>Trail bottle · $12 each</p>
@@ -28,6 +36,6 @@ export default function StoreB(){
  {promo && <p>Promo TRAIL saves on a future demo order.</p>}
  <section data-checkout-delivery tabIndex={-1}><h2>Delivery</h2><input data-checkout-label="Delivery instructions"/></section>
  <section data-checkout-review tabIndex={-1}><h2>Review</h2><button data-checkout-label="Read demo summary" onClick={()=>setPromo(true)}></button></section>
- <button onClick={()=>repair(document)}>Repair reliable labels</button><button onClick={()=>clearRepairs(document)}>Clear local repairs</button>
+ <nav aria-label="Guided checkout">{['cart','delivery','review','back'].map(command=><button key={command} onClick={()=>setNotice(runCommand(document,command))}>{command==='back'?'Previous guided step':`Go to ${command}`}</button>)}</nav><button onClick={()=>repair(document)}>Repair reliable labels</button><button onClick={()=>clearRepairs(document)}>Clear local repairs</button>
  <p>Only merchant-marked missing names can be repaired. Keyboard alternatives are provided by this controlled merchant.</p></main>;
 }

@@ -81,6 +81,7 @@ export async function handle(request:Request){
  if(path==='/api/preferences'&&method==='PUT')return reply(service.setPreferences(user,body));
  if(path==='/api/orders'&&method==='GET')return reply(service.orders(user));
  if(path==='/api/orders'&&method==='POST')return reply(service.createOrder(user),201);
+ if(/^\/api\/orders\/[a-f0-9]{24}$/.test(path)&&method==='GET')return reply(service.readOrder(user,path.slice('/api/orders/'.length)));
  if(path.startsWith('/api/orders/')&&method==='POST'){const id=path.slice('/api/orders/'.length);service.order(user,id);return reply(service.updateOrder(user,id,checkoutEventSchema.parse(body)));}
  if(path==='/api/ai/status'&&method==='GET')return reply({configured:service.ai.configured,model:'muse-spark-1.3-contributor'});
  if(path==='/api/ai/explain'&&method==='POST'){const {orderId}=z.object({orderId:z.string().regex(/^[a-f0-9]{24}$/)}).strict().parse(body);return reply(await service.ai.explain(user.id,service.order(user,orderId),preferencesSchema.parse(json(user.preferences)).guidance));}
