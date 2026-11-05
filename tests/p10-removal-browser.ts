@@ -30,7 +30,7 @@ try{
  await page.locator('#qty-mug').selectOption('2');
  await expect(page.locator('.cart-total')).toContainText('$60.00');
  await page.getByRole('button',{name:'Confirm removal of Everyday tea collection',exact:true}).click();
- await expect(page.locator('.error').filter({hasText:'Cart changed'})).toBeVisible();
+ await expect(page.locator('[data-guided-announcement]').filter({hasText:'Cart changed'})).toBeVisible();
  await expect(page.locator('#qty-tea')).toHaveValue('1');
  await page.getByRole('button',{name:'Review removal of Everyday tea collection',exact:true}).click();
  await page.keyboard.press('Tab');await page.keyboard.press('Enter');
