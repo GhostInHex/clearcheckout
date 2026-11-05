@@ -7,6 +7,9 @@ import {Worker} from 'node:worker_threads';
 import {migrate,migrations} from '../server/migrations/index.js';
 import {createService} from '../server/service.js';
 
+const currentVersion=migrations.at(-1)?.version;
+assert.ok(currentVersion);
+
 test('fresh installation and populated v1 preserve all durable rows on reopen',()=>{
  const dir=mkdtempSync(`${tmpdir()}/cc-migration-`);const file=`${dir}/test.sqlite`;
  try {
@@ -22,11 +25,11 @@ test('fresh installation and populated v1 preserve all durable rows on reopen',(
   service.db.close();
   for(let i=0;i<2;i++){
    const reopened=createService({dbPath:file});
-   assert.equal(reopened.db.pragma('user_version',{simple:true}),3);
+   assert.equal(reopened.db.pragma('user_version',{simple:true}),currentVersion);
    assert.deepEqual(tables.map(table=>reopened.db.prepare(`SELECT * FROM ${table}`).all()),before);
    assert.equal(reopened.authenticate(token)?.id,user.id);
    assert.equal(reopened.login({email:user.email,password:'synthetic-password'}).id,user.id);
-   assert.equal(reopened.db.prepare('SELECT * FROM schema_migrations').all().length,3);
+   assert.equal(reopened.db.prepare('SELECT * FROM schema_migrations').all().length,migrations.length);
    reopened.db.close();
   }
  }finally{rmSync(dir,{recursive:true,force:true});}
@@ -60,11 +63,12 @@ test('concurrent writers recheck version after acquiring immediate lock',async()
   const done=new Promise<void>((resolve,reject)=>{worker.once('error',reject);worker.once('exit',code=>code===0?resolve():reject(Error(`worker ${code}`)));});
   await new Promise<void>((resolve,reject)=>{worker.once('message',()=>resolve());worker.once('error',reject);});
   db.exec(migrations[0]?.sql || '');db.pragma('user_version=1');db.exec('COMMIT');
-  await done;migrate(db);assert.equal(db.pragma('user_version',{simple:true}),3);
+  await done;migrate(db);assert.equal(db.pragma('user_version',{simple:true}),currentVersion);
  }finally{if(db.inTransaction)db.exec('ROLLBACK');db.close();rmSync(dir,{recursive:true,force:true});}
 });
 
 test('version 2 upgrades to payment schema without altering orders',()=>{
  const db=new Database(':memory:');
- try{migrate(db,migrations.slice(0,2));db.prepare('INSERT INTO orders VALUES(?,?,?,?)').run('order','user','synthetic-body',1);migrate(db);migrate(db);assert.equal(db.pragma('user_version',{simple:true}),3);assert.deepEqual(db.prepare('SELECT * FROM orders').all(),[{id:'order',user_id:'user',body:'synthetic-body',created:1}]);assert.equal(db.prepare('SELECT * FROM payment_attempts').all().length,0);}finally{db.close();}
+ assert.equal(migrations.at(-1)?.version,3);
+ try{migrate(db,migrations.slice(0,2));db.prepare('INSERT INTO orders VALUES(?,?,?,?)').run('order','user','synthetic-body',1);migrate(db);migrate(db);assert.equal(db.pragma('user_version',{simple:true}),currentVersion);assert.deepEqual(db.prepare('SELECT * FROM orders').all(),[{id:'order',user_id:'user',body:'synthetic-body',created:1}]);assert.equal(db.prepare('SELECT * FROM payment_attempts').all().length,0);}finally{db.close();}
 });

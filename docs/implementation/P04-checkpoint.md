@@ -15,3 +15,11 @@ The implementation uses Model the Domain for the state union, Boundary Disciplin
 Commands include `npm ci`, `npm run typecheck:server`, `npm run lint`, `npm test`, and `npm run verify`. The initial migration test exposed its synthetic v1 fixture retaining the new v3 table; the fixture now drops that table before simulating v1. Initial strict checking also caught an explicitly undefined optional test option. Both were corrected. The first working-tree Next verification passed while tests were being expanded. Final committed-head verification is reported in the handoff. Logs and copied receipts are under `artifacts/program/P04`; the unchanged P03 runner also emits its native receipts under `artifacts/program/P03`.
 
 No live provider, performance, assistive-technology, independent review, deployment or production-readiness claim is made. P01 and P02 remain unverified and P02 security parity remains upstream-owned.
+
+## P04 restack integration (2026-11-05)
+
+Only P04 commit `323674f683457c1293c37f3ec92c461fbbf4c0be` was rebased from old parent `7bfab3610cc0d46af25cfed069cd09807706b358` onto frozen parent `4bce43bb25bcaa06011e5c9eb2a4aa0bef1b1630`. The rebase completed without conflicts. Branch and worktree remain `t3/payment-domain` and `/data/home/.t3/worktrees/clearcheckout/t3-07d26a5f`. P05 and all other branches were untouched.
+
+Payment production code and migration 3 are unchanged by integration. Migration tests derive latest-version and migration-count expectations from the registry while explicitly retaining the schema-3 contract. The synthetic v1 fixture drops the payment table before reconstructing v1. The inherited global AI ledger, future-schema rejection, signed Next launcher and build-before-HTTP verification order remain intact. Existing direct-service authentication tests require no adaptation.
+
+Prove It Works selects `npm run verify` at the clean committed head. Type System Discipline keeps registry expectations inferred without casts or suppressions. Receipts remain under `artifacts/program/P03/<head>-<timestamp>/receipt.json`, with the restack command log under `artifacts/program/P04/`. The final handoff reports the actual result and exact receipt. Independent OpenCode reviews and reviewer recovery remain root-owned and are not claimed here.
