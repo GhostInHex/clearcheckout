@@ -1,11 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "vite",
-  "buildCommand": "npm run build:vercel",
-  "outputDirectory": "dist",
-  "rewrites": [
-    {"source": "/api/:path*", "destination": "https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech/api/:path*"},
-    {"source": "/clearcheckout-source.zip", "destination": "https://github.com/GhostInHex/clearcheckout/archive/refs/heads/main.zip"},
-    {"source": "/(.*)", "destination": "/index.html"}
-  ]
+  "framework": "nextjs",
+  "buildCommand": "npm run build"
 }

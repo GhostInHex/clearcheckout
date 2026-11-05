@@ -5,7 +5,7 @@
     "rootDir": ".",
     "outDir": "build/server",
     "lib": [
-      "ES2022",
+      "ES2024",
       "DOM"
     ],
     "noEmitOnError": true

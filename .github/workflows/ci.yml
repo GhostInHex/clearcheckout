@@ -13,10 +13,10 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y zip
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - run: npm run build:vercel
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      - run: npm run build:vercel
       - run: npm run test:regression
       - run: npx tsx scripts/verify-compiled-server.ts
       - uses: actions/upload-artifact@v4
