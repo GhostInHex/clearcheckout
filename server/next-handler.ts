@@ -3,31 +3,13 @@ import {createService,ServiceError} from './service.js';
 import {preferencesSchema,statusErrorSchema,json} from './contracts.js';
 import {checkoutEventSchema} from '../shared/checkout-schema.js';
 import {z} from 'zod';
-import {createHmac,createHash,timingSafeEqual} from 'node:crypto';
-import {ipKeyGenerator} from 'express-rate-limit';
+import {createHmac,timingSafeEqual} from 'node:crypto';
+import {ipKeyGenerator} from './client-ip.js';
+import {readBody,readJson} from './request-body.js';
+import {createLimiter} from './rate-limit.js';
 import nodePath from 'node:path';
 let service:ReturnType<typeof createService>|undefined;
-const limits=new Map<string,{count:number;expires:number}>();
-function limit(key:string,max:number,window:number,headers:Headers){
- const now=Date.now();
- for(const [k,v] of limits)if(v.expires<=now)limits.delete(k);
- let value=limits.get(key);
- if(!value){
-  if(limits.size>=10000)throw new ServiceError(503,'Request capacity reached. Try again later.');
-  value={count:0,expires:now+window};limits.set(key,value);
- }
- value.count++;
- const reset=Math.ceil((value.expires-now)/1000);const name=`${max}-in-${window/60000}min`;
- headers.append('RateLimit',`"${name}"; r=${Math.max(0,max-value.count)}; t=${reset}`);
- headers.append('RateLimit-Policy',`"${name}"; q=${max}; w=${window/1000}; pk=:${Buffer.from(createHash('sha256').update(key.replace(/^auth:/,'')).digest('hex').slice(0,12)).toString('base64')}:`);
- if(value.count>max)headers.set('Retry-After',String(reset));
- return value.count>max;
-}
-async function readBody(request:Request,max:number){
- const chunks:Uint8Array[]=[];let size=0;const reader=request.body?.getReader();
- if(reader)try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>max){await reader.cancel();throw new ServiceError(413,'Request is too large.');}chunks.push(part.value);}}finally{reader.releaseLock();}
- return Buffer.concat(chunks);
-}
+const limit=createLimiter();
 export async function handle(request:Request){
  const headers=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'no-referrer'});
  const reply=(body:unknown,status=200)=>Response.json(body,{status,headers});
@@ -36,8 +18,7 @@ export async function handle(request:Request){
  let body:unknown;
  const contentType=request.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
  if(contentType==='application/json'){
-  const buffer=await readBody(request,8192);
-  if(buffer.length){try{body=JSON.parse(buffer.toString());if(typeof body!=='object'||body===null)throw new Error();}catch{throw new ServiceError(400,'Request could not be processed.');}}
+  body=await readJson(request);
  }
  const peer=request.headers.get('x-cc-client')||'';const signature=request.headers.get('x-cc-client-signature')||'';
  const secret=process.env.CC_TRANSPORT_SECRET;

@@ -21,3 +21,17 @@ test('configured HTTPS origin works behind a rewritten Host without trusting arb
     await fixture.close();
   }
 });
+
+test('actual trusted socket walks loopback proxies and stops at the nearest untrusted address',async()=>{
+ const fixture=await nextFixture(false,{TRUST_PROXY:'loopback'});
+ try{
+  const policy=async(chain:string)=>{
+   const response=await fetch(fixture.base+'/api/me',{headers:{'X-Forwarded-For':chain,'X-CC-Client':'192.0.2.99','X-CC-Client-Signature':'forged'}});
+   assert.equal(response.status,401);return response.headers.get('ratelimit-policy');
+  };
+  assert.equal(await policy('192.0.2.1, 198.51.100.1, 127.0.0.2'),await policy('198.51.100.1'));
+  assert.notEqual(await policy('192.0.2.1, 198.51.100.1, 127.0.0.2'),await policy('192.0.2.1'));
+  assert.equal(await policy('2001:db8:abcd:1200::1, ::1'),await policy('2001:db8:abcd:12ff::2'));
+  assert.notEqual(await policy('2001:db8:abcd:1200::1'),await policy('2001:db8:abcd:1300::1'));
+ }finally{await fixture.close();}
+});

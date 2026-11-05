@@ -26,14 +26,11 @@
     "typecheck": "npm run typecheck:frontend && npm run typecheck:extension && npm run typecheck:server && npm run typecheck:checkout && tsx scripts/verify-sources.ts && npm run typecheck:next",
     "lint": "tsx scripts/lint.ts",
     "test:regression": "tsx scripts/verify-regression.ts",
-    "build:legacy": "vite build && tsx scripts/build-extension.ts && npm run build:server",
     "typecheck:next": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",
-    "express": "^5.1.0",
-    "express-rate-limit": "^8.2.1",
-    "helmet": "^8.1.0",
+    "ip-address": "^10.7.6",
     "next": "^16.4.5",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -45,18 +42,15 @@
     "@playwright/test": "^1.56.1",
     "@types/better-sqlite3": "^9.6.0",
     "@types/chrome": "^0.3.7",
-    "@types/express": "^5.0.6",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^5.1.0",
     "esbuild": "^0.25.12",
     "eslint": "^10.14.0",
     "jiti": "^2.7.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.0",
-    "typescript-eslint": "^8.72.1",
-    "vite": "^7.2.2"
+    "typescript-eslint": "^8.72.1"
   },
   "engines": {
     "node": "22.x"
