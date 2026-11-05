@@ -1,4 +1,4 @@
-import {chromium,expect,type Page} from '@playwright/test';
+import {chromium,expect,type Page,type Locator} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import assert from 'node:assert/strict';
 import {mkdirSync,writeFileSync} from 'node:fs';
@@ -16,6 +16,13 @@ async function audit(page:Page){
  const result=await new AxeBuilder({page}).withRules(rules).analyze();
  return result.violations.map(rule=>({id:rule.id,nodes:rule.nodes.map(node=>({target:node.target,html:node.html,failureSummary:node.failureSummary})),count:rule.nodes.length}));
 }
+async function tabTo(target:Locator){
+ for(let index=0;index<100;index++){
+  if(await target.evaluate(element=>element===document.activeElement))return;
+  await page.keyboard.press('Tab');
+ }
+ throw Error('Keyboard could not reach target');
+}
 async function keyboard(name:string){
  for(let index=0;index<100;index++){
   const target=page.getByRole('button',{name,exact:true});
@@ -29,7 +36,7 @@ try{
  await page.goto(fixture.base);
  await page.getByRole('button',{name:'Create your free account'}).waitFor();
  await keyboard('Create your free account');
- await page.getByLabel('Email address').focus();await page.keyboard.type('p08@test.example');
+ await tabTo(page.getByLabel('Email address'));await page.keyboard.type('p08@test.example');
  await page.keyboard.press('Tab');await page.keyboard.type('correctpassword123');await page.keyboard.press('Tab');await page.keyboard.press('Enter');
  await page.getByRole('button',{name:'Save and enter my space'}).waitFor();await keyboard('Save and enter my space');
  await page.getByRole('button',{name:'Open the demo store'}).waitFor();await keyboard('Open the demo store');
@@ -50,7 +57,7 @@ try{
   if(store==='A'){await keyboard('Read cart summary');await page.keyboard.press('Alt+Shift+c');await expect(page.locator('[data-checkout-cart]')).toBeFocused();}
   else {
    await keyboard('Show promo (keyboard alternative)');await expect(page.getByText('Promo TRAIL saves on a future demo order.')).toBeVisible();
-   await page.getByLabel('Quantity (keyboard alternative)').focus();await page.keyboard.press('ArrowUp');await expect(page.getByText('Total $24',{exact:true})).toBeVisible();
+   await tabTo(page.getByLabel('Quantity (keyboard alternative)'));await page.keyboard.press('ArrowUp');await expect(page.getByText('Total $24',{exact:true})).toBeVisible();
   }
  }
  writeFileSync(`${output}/receipt.json`,JSON.stringify({sha,dirty:execFileSync('git',['status','--porcelain'],{encoding:'utf8'}),records,keyboard:'passed',limitations:['Selected name rules only','axe does not establish screen reader usability','No manual toolbar or real AT verification']},null,2));
