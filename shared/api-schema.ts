@@ -16,3 +16,5 @@ export const errorSchema=z.object({error:z.string()});
 export const errorMessage=(error:unknown)=>error instanceof Error?error.message:String(error);
 export type PublicUser=z.infer<typeof publicUserSchema>;
 export type CheckoutResponse=z.infer<typeof checkoutResponseSchema>;
+
+export const credentialsSchema=z.object({email:z.email().max(254).transform(v=>v.toLowerCase()),password:z.string().min(10).max(128)});
