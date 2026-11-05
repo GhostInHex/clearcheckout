@@ -17,7 +17,7 @@
     "test:media-live": "tsx scripts/verify-media-live.ts",
     "test:microphone": "tsx tests/microphone-browser.ts",
     "test:media-live-browser": "tsx tests/media-live-browser.ts",
-    "build:vercel": "npm run build && tsx scripts/copy-vercel-downloads.ts",
+    "build:vercel": "npm run build",
     "typecheck:checkout": "tsc -p tsconfig.checkout.json && tsc -p tsconfig.browser-tests.json",
     "build:server": "tsc -p tsconfig.server.json",
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.node-tests.json",

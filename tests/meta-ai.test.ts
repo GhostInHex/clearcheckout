@@ -5,7 +5,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
 import {createMetaGuidance,metaConfig} from '../server/meta-ai.js';
-import {createApp} from '../server/app.js';
+import {nextFixture} from './next-fixture.js';
 const order:Pick<import('../shared/checkout.js').Order,'cart'|'delivery'|'state'|'revision'> & {id:string}={id:'a'.repeat(24),cart:{tea:1,mug:1},delivery:'standard',state:'draft',revision:1};
 const config={key:'test-only-key',budgetMicros:5000000,callLimit:100};
 const reply=(usage:{input_tokens:number;output_tokens:number}|null={input_tokens:400,output_tokens:100})=>new Response(JSON.stringify({status:'completed',output:[{type:'reasoning'},{type:'message',role:'assistant',content:[{type:'output_text',text:'Review your tea and mug. No money moves.'}]}],usage}));
@@ -36,9 +36,9 @@ test('unconfigured never calls transport; invalid config fails closed',async()=>
  const db=new Database(':memory:');const ai=createMetaGuidance(db,{config:{...config,key:''},transport:()=>assert.fail('must not call')});await assert.rejects(ai.explain('u',order,'brief'),/not configured/);assert.equal(metaConfig({META_AI_BUDGET_USD:'invalid'}).budgetMicros,0);assert.equal(metaConfig({META_AI_BUDGET_USD:'500'}).budgetMicros,5000000);db.close();
 });
 test('authenticated endpoint accepts only order ID and isolates user orders',async()=>{
- const {app,db}=createApp({dbPath:':memory:',aiOptions:{config,transport:async()=>reply()}});const server=app.listen(0);const base=`http://localhost:${port(server)}/api`;let cookie='';
+ const fixture=await nextFixture(true);const base=fixture.base+'/api';let cookie='';
  const request=async(path:string,body:unknown)=>{const response=await fetch(base+path,{method:'POST',headers:{'content-type':'application/json','x-clearcheckout':'1',cookie},body:JSON.stringify(body)});return {response,data:z.object({id:z.string().optional()}).parse(await response.json())};};
- try {assert.equal((await request('/ai/explain',{orderId:order.id})).response.status,401);let signup=await request('/signup',{email:'one@test.com',password:'correctpassword'});cookie=sessionCookie(signup.response);const saved=(await request('/orders',{})).data;assert.equal((await request('/ai/explain',{orderId:saved.id,prompt:'arbitrary text'})).response.status,400);assert.equal((await request('/ai/explain',{orderId:saved.id})).response.status,200);signup=await request('/signup',{email:'two@test.com',password:'correctpassword'});cookie=sessionCookie(signup.response);assert.equal((await request('/ai/explain',{orderId:saved.id})).response.status,404);}finally{await new Promise(r=>server.close(r));db.close();}
+ try {assert.equal((await request('/ai/explain',{orderId:order.id})).response.status,401);let signup=await request('/signup',{email:'one@test.com',password:'correctpassword'});cookie=sessionCookie(signup.response);const saved=(await request('/orders',{})).data;assert.equal((await request('/ai/explain',{orderId:saved.id,prompt:'arbitrary text'})).response.status,400);assert.equal((await request('/ai/explain',{orderId:saved.id})).response.status,200);signup=await request('/signup',{email:'two@test.com',password:'correctpassword'});cookie=sessionCookie(signup.response);assert.equal((await request('/ai/explain',{orderId:saved.id})).response.status,404);}finally{await fixture.close();}
 });
 test('reservations survive database reopen and concurrent SQLite connections',async()=>{
  const {mkdtempSync,rmSync}=await import('node:fs');const {tmpdir}=await import('node:os');const folder=mkdtempSync(`${tmpdir()}/cc-ai-`);const file=`${folder}/ledger.sqlite`;let db=new Database(file);let second;

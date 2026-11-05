@@ -38,13 +38,16 @@
     "app/**/*.tsx",
     "next-env.d.ts",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
     "next.config.ts",
     "scripts/next-start.ts",
     "tests/next-provider-fixture.ts",
-    "scripts/verify-next-security.ts"
+    "scripts/verify-next-security.ts",
+    "tests/next-browser-provider.ts",
+    "tests/next-fixture.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".next/dev"
   ]
 }

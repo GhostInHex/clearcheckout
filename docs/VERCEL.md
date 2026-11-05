@@ -1,19 +1,11 @@
-# Vercel submission deployment
+# Next packaging and hosting constraint
 
-Production URL: https://clearcheckout-one.vercel.app
+The P02 application uses Next App Router and native better-sqlite3. Its deployment target is a persistent Node 22 process with mounted persistent database and generated-media directories. Vercel Functions local storage cannot supply this durability. `vercel.json` selects the framework for packaging; it does not make this application suitable for ephemeral hosting. P06 owns hosting and cutover. No deployment is authorized by this document.
 
-Vercel hosts the static React frontend, video, captions, and extension download. Exact `/api/*` rewrites forward authenticated requests to the existing HTTPS backend. SQLite accounts, media, the server-only Meta key, and the durable shared spending ledger remain on the sandbox. The sandbox must stay running. This deployment does not migrate the backend into Vercel Functions.
+Run `npm ci`, `npm run build:vercel`, then `npm start`. `build:vercel` preserves the historical command name as an alias for the Next production build and extension asset preparation. Production must run the custom server at `scripts/next-start.ts`. Raw `next start` lacks the trusted socket identity boundary and is unsupported. Development uses the same custom server through `npm run dev` with Webpack resolution.
 
-The verified Vercel routing behavior is documented at https://vercel.com/docs/routing/rewrites. External-origin rewrites preserve the frontend URL while forwarding the request. Native local SQLite and generated files must not be treated as durable Vercel Function storage.
+Set `DB_PATH` inside the persistent database directory. Generated media lives beside that database in `media`. Preserve both directories and back them up consistently. Terminate TLS at the host proxy, set exact approved `PUBLIC_ORIGIN` and `PUBLIC_ORIGINS` values, and enable `COOKIE_SECURE=true`. Set `TRUST_PROXY=loopback` only when the immediately connected proxy is loopback and its forwarded chain is controlled. Without that setting, forwarded headers do not supply client authority. The custom server overwrites and signs internal identity headers for every request.
 
-Build with Node 22 using `npm ci` and `npm run build:vercel`. Vercel's source build uses `vercel.json`. The video and captions are tracked public assets, and the extension archive is copied into `dist` after its build. The source archive route points at the GitHub main-branch archive.
+The build prepares `public/extension` and `public/clearcheckout-extension.zip`. Video and captions retain their public URLs. `/clearcheckout-source.zip` explicitly redirects to the repository main-branch archive, which includes committed files only. Never package environment files, databases, generated runtime media, or credentials into public assets. Browser imports are checked separately from the Node server sources.
 
-A prebuilt deployment can instead use `.vercel/output/static` containing the built `dist` and `.vercel/output/config.json` with API routing. Neither the source build nor prebuilt frontend requires the Meta key. Never upload `.env`, databases, runtime media, or credential files.
-
-The backend operator added `https://clearcheckout-one.vercel.app` to the comma-separated `PUBLIC_ORIGINS` value and restarted `clearcheckout-demo`. The original `PUBLIC_ORIGIN` keeps the instabox demo authorized. Future preview deployments need their own exact allowlist entry; arbitrary `*.vercel.app` origins must not be trusted.
-
-## Verification (2026-11-04)
-
-`BROWSER_BASE_URL=https://clearcheckout-one.vercel.app npm run test:browser` passed the full production journey: signup, onboarding, saved preferences, repair, review, and simulated confirmation, with zero reported axe violations and no page errors. A separate authenticated request through the Vercel proxy created an account and demo order, then returned a live `muse-spark-1.3-contributor` explanation with the expected $24.00, $18.00, $42.00, and $0.00 amounts.
-
-The demo and video returned HTTP 200. The extension archive returned HTTP 200. The source route returned a redirect to the GitHub `main` archive, which only includes committed files. Frontend-only HTTP 200 is insufficient; re-verify signup, saved preferences, order review, simulated confirmation, and downloads after any deployment or backend restart. Public-origin validation and secure cookies must remain enabled.
+The former static Vite frontend and external sandbox API rewrite are historical deployment evidence only. They do not describe this Next build. Verify isolated production startup, restart persistence, signup, preferences, review, confirmation, provider fixtures and downloads before any future cutover. Local checks and packaging do not establish production deployment health.

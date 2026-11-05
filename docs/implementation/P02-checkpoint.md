@@ -85,3 +85,46 @@ Remaining work before full P02 parity and cleanup:
 - Run root-owned independent reviews, full regression lanes and the outstanding program checks before calling P02 code-ready.
 
 Boundary Discipline kept HTTP validation in the adapter. Model the Domain represented rate state as client buckets and resolved permitted navigation centrally. Type System Discipline kept parsed response/SQLite checks schema-derived. Prove It Works required running the optimized Next process and production browser, including a real restart, rather than relying on framework-neutral tests.
+
+## Final cleanup continuation (2026-11-05)
+
+This section supersedes the fixture-migration status above. P02 remains INCOMPLETE and independently unverified. This is a runnable continuation checkpoint, not a code-ready verdict. No P03 migrations or P04 payment-domain code was imported. No children, deployment, push, PR, merge, live provider request, production database access or environment-file access occurred.
+
+### Completed in this continuation
+
+- Every test and script caller of `createApp` migrated. Accounts, configured proxy origins and authenticated explanation endpoints now exercise real Next HTTP. The redundant Express reopen test was consolidated into the existing direct-service reopen test and actual production restart verifier. The unit suite now has 19 tests.
+- The six-suite regression runner starts isolated production Next with a minimal environment. Explanation and media browser suites start their own isolated Next processes with a guarded Node test preload. The preload refuses production mode and requires an isolated temporary path and fake key. It intercepts provider transport only. It supplies explanation text, PNG, transcription and SAM SSE while preserving authentication, ledger reservation, cache validation and cooldowns. The media browser no longer fulfills API routes in Playwright. Its 31-second waits retain the real provider cooldown.
+- Explanation UI checks retain consent, plain-text rendering, provider-call count, cache reuse and revision invalidation. Media checks pass valid WAV through the actual adapter, reject unsafe transcribed commands in the UI and render real parsed segmentation geometry. Microphone checks use actual Next without automatic uploads.
+- The historical `verify-compiled-server.ts` filename remains, but its command starts production Next through `npm start`. Readiness now checks HTTP instead of an obsolete Express log message. It verifies sessions and completed demo orders after a real restart and checks downloads and error contracts.
+- Development startup now explicitly selects Webpack through the Next custom-server API. The initial dev probe exposed Turbopack failing the existing `.js` import aliases. A successful isolated dev probe follows the fix. The strict production config excludes `.next/dev` so generated global declarations do not collide with production declarations after running dev.
+- CI builds before HTTP tests. `build:vercel` is a meaningful Next packaging alias. The obsolete copy into Vite `dist` was deleted. README and `docs/VERCEL.md` document custom-server startup, persistent Node storage, public assets and the Vercel Functions durability constraint.
+
+### Parser evidence and remaining implementation
+
+`artifacts/program/P02/final-cleanup/legacy-parser.log` records direct probes of the existing parser before deletion. Valid gzip JSON with a bad origin reaches origin validation and returns 403. Unsupported latin1 charset and unknown encoding return 415 before origin checks. Corrupt gzip returns 400. Decompressed JSON over 8 KiB returns 413. A truncated Content-Length JSON request receives a bare HTTP 400 and the next request still succeeds. These observations are Express baseline evidence only. The Next reader still needs equivalent bounded decompression, charset/encoding ordering and explicit abort coverage. Do not delete that baseline before matching these contracts.
+
+Remaining work from the final-cleanup brief is explicit:
+
+- Implement and verify those Next parser contracts, including decompression size bounds and aborted streams.
+- Extend actual Next provider HTTP coverage to media timeout, incomplete or malformed SSE, provider media failures, invalid generated image dimensions, invalid cached media and recovery. Existing direct-service fault tests do not close those HTTP cases.
+- Add deterministic bucket expiry and 10,000-bucket saturation cases, IPv6 /56 aggregation and multi-proxy-chain cases at the trusted socket boundary. Preserve no authority from unsigned or spoofed headers.
+- Remove the now-uncalled `server/app.ts`, obsolete `server/index.ts`, Vite entry/configuration and `build:legacy` once parser parity passes. Remove Express, Helmet, Vite and associated types. The current adapter still uses express-rate-limit's maintained IPv6 helper; retain that dependency only with justification or replace it with a maintained normalization package and explicit tests. Do not replace it with an untested custom IPv6 parser.
+- Update remaining source inventory, compilation commands and historical deployment material after deleting the legacy files. `legacy-inventory.log` records remaining references; these are not claimed absent.
+- Root still owns independent reviews, the ten program lanes, performance comparison and P03/P04 restacks. Passing local tests does not mark P01 or P02 independently verified.
+
+Model the Domain kept the isolated Next process lifecycle in one reusable test fixture. Prove It Works changed the regression and restart checks to exercise the actual Next artifact. The parser probe is the reason legacy deletion remains open.
+
+### Final receipts for this continuation
+
+All final commands exited zero, sequentially after the production build. Receipts reside under ignored `artifacts/program/P02/final-cleanup/`.
+
+- `build-final.log` records `npm run build`.
+- `typecheck-final.log`, `lint-final.log` and `unit-final.log` record strict typecheck, lint and all 19 unit tests.
+- `regression-final.log` records all six actual Next browser suites, including guarded provider UI fixtures and microphone lifecycle.
+- `security-final.log` records `verify-next-security.ts`, including actual Next provider faults, bounds, ownership, rate limits, durable ledger and restart checks already defined by that verifier.
+- `restart-final.log` records the production `npm start` restart/download verifier.
+- `packaging-final.log` records `npm run build:vercel` with the final Next packaging alias.
+- `dev-final.log` records successful development startup and HTTP checks with an isolated database and no environment files present beyond `.env.example`. `dev.log` preserves the initial failed Turbopack probe.
+- `screenshots/` contains the final actual Next shopper desktop and mobile captures. These do not claim media-fault screenshots or ten-lane program evidence.
+
+No baseline evidence is relabelled as Next evidence. The parser probe and dependency inventory remain explicitly legacy evidence. Full P02 cleanup and independent verification remain open despite these passing checks.

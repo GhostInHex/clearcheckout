@@ -14,7 +14,7 @@ npm start
 
 Open http://localhost:3000. No secrets, provider account, or card details are needed. SQLite initializes automatically in `data/clearcheckout.sqlite`. Preserve that directory across restarts. Set `DB_PATH` to change its location. Set `COOKIE_SECURE=true` behind HTTPS. Do not expose the local HTTP configuration publicly.
 
-For frontend development, run `npm run dev` and `npx vite` in separate terminals. Vite proxies API calls to port 3000.
+For development, run `npm run dev`. Both modes use `scripts/next-start.ts`, which signs the socket client identity before forwarding requests to Next. Raw `next start` is unsupported. The default listener is loopback. Set `HOSTNAME` and `PORT` explicitly for a host proxy.
 
 ## Try the complete journey
 
@@ -40,17 +40,19 @@ The embedded demo and extension bundle share `shared/dom.ts` for scanning, repai
 ```sh
 npm ci
 npx playwright install --with-deps chromium
+npm run build:vercel
 npm run typecheck
 npm run lint
 npm test
-npm run build:vercel
 npm run test:regression
 npx tsx scripts/verify-compiled-server.ts
 ```
 
-Build before starting the compiled server or browser suites. `build:vercel` runs `build` and copies the extension ZIP to `dist/clearcheckout-extension.zip`. Packaging requires the system `zip` executable. Vite, Express, and deployment routing are unchanged.
+Build before tests that start Next. `build:vercel` is a packaging alias for the Next build and extension preparation. It does not deploy. Public extension files are prepared in `public/extension` and `public/clearcheckout-extension.zip`. The source ZIP URL redirects explicitly to the repository archive.
 
-`test:regression` runs the existing `test:browser`, `test:dom`, `test:extension`, `test:meta-browser`, `test:media-browser`, and `test:microphone` commands sequentially. It supplies an ephemeral port, temporary SQLite database, disabled providers, and a minimal child environment. It imports the app without loading `.env`. The compiled verifier runs actual `npm start`, uses its own temporary database and port 3487 (`COMPILED_TEST_PORT` overrides it), and sets `CLEARCHECKOUT_SKIP_ENV_FILE=1`. Neither command uses production data or provider credentials. Standalone browser commands accept `BROWSER_BASE_URL`.
+`test:regression` runs six browser commands sequentially against actual Next processes with temporary databases, loopback ports, and minimal environments. Provider UI fixtures use a guarded test-only preload with deterministic outbound responses. They retain authentication, consent, validation, budget reservations and cooldowns. They never call a real provider. The production restart verifier retains its historical filename `scripts/verify-compiled-server.ts` and runs actual `npm start` twice against one isolated database. It checks session and order persistence and downloads. `COMPILED_TEST_PORT` overrides its default loopback port 3487. No fixture loads environment files.
+
+Hosting requires a persistent Node 22 process with persistent mounted SQLite and media directories. Vercel Functions ephemeral storage cannot provide durability for this design. Deployment is a separate milestone. Express and Vite remain an incomplete parser-parity baseline until the outstanding P02 cleanup is finished.
 
 `typecheck` checks every first-party TypeScript source through strict environment-specific configurations. All groups enable `strict`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes`. Frontend covers React and shared modules; extension covers MV3 and shared DOM; server covers compiled Node sources; Node tests cover unit fixtures and helpers; checkout covers packaging and configuration; browser tests cover every browser fixture and script, including live-provider scripts and the recorder. The inventory fails on missing coverage or first-party JavaScript and checks browser bundles for Node/server imports. There are no tool-required JavaScript exceptions. Python video assembly, JSON, CSS, HTML, media, and generated JavaScript remain in their native formats.
 
