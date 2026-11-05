@@ -1,1 +1,34 @@
 chrome.action.onClicked.addListener(async tab=>{if(tab.id)try{await chrome.scripting.executeScript({target:{tabId:tab.id},files:['content.js']});}catch{await chrome.action.setBadgeText({tabId:tab.id,text:'!'});}});
+
+import {appOrigin,linkMessage,linkBindingSchema,credentialSchema,trustedSender} from './link.js';
+const ready=Promise.all([
+ chrome.storage.local.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'}),
+ chrome.storage.session.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'})
+]);
+const random=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),byte=>byte.toString(16).padStart(2,'0')).join('');
+let busy=false;
+chrome.runtime.onMessage.addListener((input:unknown,sender,reply)=>{
+ if(!trustedSender(sender))return false;
+ const parsed=linkMessage.safeParse(input);if(!parsed.success)return false;
+ if(busy){reply({error:'Another linking request is pending.'});return false;}
+ const message=parsed.data;
+ busy=true;
+ async function run(){
+  await ready;
+  if(message.kind==='forget'){await chrome.storage.session.remove('device');await chrome.storage.local.remove('binding');return {message:'Local credential removed. Revoke the device in your account too.'};}
+  const stored=await chrome.storage.local.get('binding');
+  let binding=linkBindingSchema.safeParse(stored.binding);
+  if(!binding.success){const value={extensionId:chrome.runtime.id,installationId:random(),nonce:random()};await chrome.storage.local.set({binding:value});binding=linkBindingSchema.safeParse(value);}
+  if(!binding.success)throw Error('Installation identity unavailable.');
+  if(message.kind==='binding')return {binding:binding.data};
+  if(!await chrome.permissions.contains({origins:[appOrigin+'/*']}))throw Error('Grant the account origin permission first.');
+  const response=await fetch(appOrigin+'/api/extension/exchange',{method:'POST',credentials:'omit',redirect:'error',headers:{'Content-Type':'application/json','x-clearcheckout':'1'},body:JSON.stringify({...binding.data,code:message.code}),signal:AbortSignal.timeout(10000)});
+  if(!response.ok)throw Error('Link rejected, expired or already used.');
+  const device=credentialSchema.parse(await response.json());
+  await chrome.storage.session.set({device});
+  await chrome.storage.local.remove('binding');
+  return {message:'Linked until '+new Date(device.expires).toISOString()+'. Scope: '+device.scope+'. Image suggestions unavailable pending privacy evaluation.'};
+ }
+ void run().then(reply,()=>reply({error:'Link unavailable. Check permission, account approval and code expiry.'})).finally(()=>{busy=false;});
+ return true;
+});
