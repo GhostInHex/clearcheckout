@@ -20,14 +20,14 @@ The script waits between requests to respect the app throttle. It does not reset
 
 1. Set `DEMO_URL` to the public app URL.
 2. Set `VOICE_FIXTURE` to a nonprivate mono PCM16 WAV containing "Go to cart" at 16 or 24 kHz.
-3. Run `node scripts/video/record.mjs`.
+3. Run `npx tsx scripts/video/record.ts`.
 4. Run `python3 scripts/video/assemble.py`.
 5. Decode the output with `ffmpeg -v error -i artifacts/submission/clearcheckout-submission.mp4 -f null -`.
 
 The final video is `artifacts/submission/clearcheckout-submission.mp4`.
 The sidecar captions are `artifacts/submission/captions.srt`.
 The timed narration is `artifacts/submission/transcript.txt`.
-The source narration and chapter interactions live in `scripts/video/record.mjs`.
+The source narration and chapter interactions live in `scripts/video/record.ts`.
 Generated media remain in the ignored `artifacts` directory.
 
 The recording intentionally stops if a model request fails. It does not substitute a fabricated success.
