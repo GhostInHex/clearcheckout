@@ -11,3 +11,13 @@ test('HTTP checkout requests retain required confirmation outcome', async () => 
   assert.deepEqual(checkoutEventSchema.parse({type:'review', extra:true}), {type:'review'});
   assert.equal(checkoutEventSchema.safeParse({type:'change', cart:{tea:0,mug:0}, delivery:'standard'}).success, false);
 });
+
+test('exact removal rejects stale, wrong and absent items and invalidates review',()=>{
+ const removal={type:'remove-item',itemId:'tea',name:'Everyday tea collection',revision:1} satisfies import('../shared/checkout-schema.js').CheckoutRequest;
+ const next=transition(transition(order,{type:'review'}),removal);
+ assert.equal(next.cart.tea,0);assert.equal(next.cart.mug,1);assert.equal(next.revision,2);assert.equal(next.reviewedRevision,null);
+ assert.throws(()=>transition(next,removal));
+ assert.throws(()=>transition(order,{...removal,name:'Stoneware morning mug'}));
+ assert.throws(()=>transition(next,{...removal,revision:2}));
+ assert.throws(()=>transition(next,{...removal,itemId:'mug',name:'Stoneware morning mug',revision:2}));
+});

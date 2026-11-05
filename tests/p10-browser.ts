@@ -17,6 +17,10 @@ try{
  await page.getByRole('button',{name:'Go to delivery'}).click();
  await expect(page.locator('[data-checkout-delivery]')).toBeFocused();
  await page.keyboard.press('Alt+Shift+C');await expect(page.locator('[data-checkout-cart]')).toBeFocused();
+ await page.getByRole('button',{name:'Previous guided step',exact:true}).click();
+ await expect(page.locator('[data-checkout-delivery]')).toBeFocused();
+ await page.getByRole('button',{name:'Read total with provenance',exact:true}).click();
+ await expect(page.locator('#clearcheckout-host').locator('#status')).toContainText('Unverified DOM total');
  await page.getByRole('button',{name:'Repair reliable labels',exact:true}).last().click();
  await expect(page.locator('input[data-checkout-label]')).toHaveAccessibleName('Delivery instructions');
  await page.getByRole('button',{name:'Undo local repairs',exact:true}).click();

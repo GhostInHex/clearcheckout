@@ -126,11 +126,26 @@ export function clearRepairs(root: ParentNode) {
     element.removeAttribute('data-clearcheckout-repaired'); ownedLabels.delete(element);
   }
 }
+const navigationHistory=new WeakMap<ParentNode,Array<'cart'|'delivery'|'review'>>();
 export function runCommand(root: ParentNode | null, command: string) {
   const parsed=parseCommand(command);
   if(parsed.kind==='undo-local-repair' && root){clearRepairs(root);return 'Owned local labels undone. Merchant changes are preserved.';}
+  if(parsed.kind==='read-total'&&root){
+    const totals=root.querySelectorAll('[data-checkout-total]');
+    return totals.length===1?`Unverified DOM total: ${totals[0]?.textContent?.trim()}. Use merchant review to verify.`:'No unique total is available. No action was taken.';
+  }
+  if(parsed.kind==='back'&&root){
+    const history=navigationHistory.get(root)??[];
+    if(history.length<2)return 'No previous guided step. No action was taken.';
+    const destination=history[history.length-2];
+    if(!destination||!merchantAdapter(root).navigate(destination))return 'Previous section unavailable. No action was taken.';
+    history.pop();return `Moved back to ${destination}.`;
+  }
   if(parsed.kind!=='navigate'||!root)return 'Command unavailable. No action was taken.';
   if(!merchantAdapter(root).navigate(parsed.destination))return 'That section is not available on this page. No action was taken.';
+  const history=navigationHistory.get(root)??[];
+  if(history[history.length-1]!==parsed.destination)history.push(parsed.destination);
+  navigationHistory.set(root,history);
   return `Moved to ${parsed.destination}. Review the details before taking an action.`;
 }
 export function keyboardCommand(event: KeyboardEvent) {

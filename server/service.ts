@@ -92,7 +92,7 @@ export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,medi
   const payments=createPayments(db,(userId,id)=>order(findUser(userId),id),sandbox?createSandboxPayPal(db,sandbox):paymentProvider);
   const updateOrder=db.transaction((user:User,id:string,action:CheckoutRequest) => {
     const value=order(user,id);
-    try {const next=transition(value,action);if(action.type==='change' || action.type==='cancel' || action.type==='confirm')payments.invalidate(id);return save({...next,id:value.id},user);}catch(error){fail(409,error instanceof Error ? error.message : String(error));}
+    try {const next=transition(value,action);if(action.type==='remove-item' || action.type==='change' || action.type==='cancel' || action.type==='confirm')payments.invalidate(id);return save({...next,id:value.id},user);}catch(error){fail(409,error instanceof Error ? error.message : String(error));}
   });
   const devices=createExtensionDevices(db,{approvedId:approvedExtensionId,fail});
   const labels=createLabelSuggestions(db,devices,aiOptions);

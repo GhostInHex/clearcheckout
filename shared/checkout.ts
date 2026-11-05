@@ -1,3 +1,4 @@
+import {cartSchema} from './checkout-schema.js';
 import type {Cart, Delivery, CheckoutRequest} from './checkout-schema.js';
 export type {Cart, Delivery, CheckoutRequest} from './checkout-schema.js';
 // Direct callers historically omit outcome to simulate success. HTTP requests require it.
@@ -20,6 +21,12 @@ export const money = (cents: number) => new Intl.NumberFormat('en-US', {style:'c
 export function confirmationPhrase(order: Pick<Order, 'cart' | 'delivery'>) { return `CONFIRM ${money(quote(order.cart, order.delivery).total)}`; }
 export function transition(order: Order, event: CheckoutEvent): Order {
   switch (event.type) {
+    case 'remove-item': {
+      if(order.state==='completed_demo'||event.revision!==order.revision)throw new Error('Cart changed. Review the current item again.');
+      if(catalog[event.itemId]?.name!==event.name||order.cart[event.itemId]===0)throw new Error('Selected item is unavailable.');
+      const cart=cartSchema.parse({...order.cart,[event.itemId]:0});
+      return {...order,cart,revision:order.revision+1,state:'draft',reviewedRevision:null};
+    }
     case 'change':
       if (order.state === 'completed_demo') throw new Error('Start a new order after completion.');
       return {...order, cart:event.cart, delivery:event.delivery, revision:order.revision + 1, state:'draft', reviewedRevision:null};
