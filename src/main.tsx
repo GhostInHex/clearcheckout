@@ -18,12 +18,18 @@ function Icon({type='spark',...props}: React.SVGProps<SVGSVGElement> & {type?:st
   const paths:Record<string,string>={spark:'m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z',arrow:'M5 12h14m-6-6 6 6-6 6',check:'m5 12 4 4L19 6',eye:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',shield:'m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z m-4 9 3 3 5-6',bag:'M5 7h14l1 14H4L5 7Zm3 0V5a4 4 0 0 1 8 0v2'};
   return <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}><path d={paths[type] || paths.spark}/></svg>;
 }
+function routeFor(user:PublicUser|null,path:string){
+ const requested=path==='/'?'home':path.slice(1);
+ if(!user)return ['home','login','signup'].includes(requested)?requested:'home';
+ if(!user.onboarded)return 'onboarding';
+ return ['dashboard','preferences','demo','onboarding'].includes(requested)?requested:'dashboard';
+}
 export default function App(){
   const [user,setUser]=useState<PublicUser|null>(null),[page,setPage]=useState('home'),[ready,setReady]=useState(false),[message,setMessage]=useState('');
-  useEffect(()=>{api(publicUserSchema,'/me').then(u=>{setUser(u);setPage(u.onboarded?(location.pathname==='/'?'dashboard':location.pathname.slice(1)):'onboarding');}).catch(()=>{setPage(['login','signup'].includes(location.pathname.slice(1))?location.pathname.slice(1):'home');}).finally(()=>setReady(true));},[]);
+  useEffect(()=>{api(publicUserSchema,'/me').then(u=>{setUser(u);const next=routeFor(u,location.pathname);setPage(next);history.replaceState(null,'',`/${next}`);}).catch(()=>{const next=routeFor(null,location.pathname);setPage(next);history.replaceState(null,'',next==='home'?'/':`/${next}`);}).finally(()=>setReady(true));},[]);
   const go=(p:string)=>{setPage(p);history.pushState(null,'',p==='home'?'/':`/${p}`);setMessage('');window.scrollTo(0,0);};
   useEffect(()=>{if(ready) document.getElementById('main-title')?.focus();},[page,ready]);
-  useEffect(()=>{const back=()=>setPage(location.pathname==='/'?'home':location.pathname.slice(1));window.addEventListener('popstate',back);return ()=>window.removeEventListener('popstate',back);},[]);
+  useEffect(()=>{const back=()=>{const next=routeFor(user,location.pathname);setPage(next);history.replaceState(null,'',next==='home'?'/':`/${next}`);};window.addEventListener('popstate',back);return ()=>window.removeEventListener('popstate',back);},[user]);
   const prefs=user?.preferences;
   return <div className={`${prefs?.contrast?'high-contrast':''} text-${prefs?.textSize || 'standard'}`}>
     <a className="skip" href="#main">Skip to content</a>

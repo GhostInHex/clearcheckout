@@ -39,7 +39,10 @@
     "next-env.d.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "next.config.ts"
+    "next.config.ts",
+    "scripts/next-start.ts",
+    "tests/next-provider-fixture.ts",
+    "scripts/verify-next-security.ts"
   ],
   "exclude": [
     "node_modules"

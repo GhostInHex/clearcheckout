@@ -12,6 +12,7 @@
     ],
     "allowImportingTsExtensions": true
   },
+  "exclude": ["scripts/next-start.ts"],
   "include": [
     "tests/*browser.ts",
     "tests/browser.ts",

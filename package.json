@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "tsx scripts/next-start.ts --dev",
     "build": "tsx scripts/build-extension.ts && tsx scripts/prepare-next-assets.ts && next build --webpack",
-    "start": "next start",
+    "start": "tsx scripts/next-start.ts",
     "test": "tsx --test tests/*.test.ts",
     "test:browser": "tsx tests/browser.ts",
     "test:dom": "tsx tests/dom-browser.ts",
