@@ -14,7 +14,7 @@ The installed panel has item selection, review preview, confirm and cancel. Keyb
 
 ## Verification and limits
 
-The installed production Next/MV3 driver is tests/p10-installed-adapters.ts. It covers both stores, exact selection, preview, cancel, stale rejection, keyboard confirmation, resulting totals and an unknown route. It performs real onboarding and first-party requests without route fulfillment. Evidence belongs under artifacts/program/P10/installed-adapters. Unit coverage checks wrong identity, quantity, revision, duplicate IDs, changed totals, unsupported origins and forbidden protocol operations. Existing focused suites remain required after the final commit. The receipt records actual outcomes and SHA.
+The installed production Next/MV3 driver is tests/p10-installed-adapters-browser.ts. It covers both stores, exact selection, preview, cancel, stale rejection, keyboard confirmation, resulting totals and an unknown route. It performs real onboarding and first-party requests without route fulfillment. Evidence belongs under artifacts/program/P10/installed-adapters. Unit coverage checks wrong identity, quantity, revision, duplicate IDs, changed totals, unsupported origins and forbidden protocol operations. Existing focused suites remain required after the final commit. The receipt records actual outcomes and SHA.
 
 Model the Domain selected typed request, review, result and capability variants. Boundary Discipline kept mutation enforcement with each merchant state owner. Prove It Works selected production Next and actual installed MV3 rather than route mocks. Deslop removed an inline service wrapper before commit. Delegation was skipped under the explicit no-children instruction.
 
