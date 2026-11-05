@@ -26,7 +26,8 @@
     "typecheck": "npm run typecheck:frontend && npm run typecheck:extension && npm run typecheck:server && npm run typecheck:checkout && tsx scripts/verify-sources.ts && npm run typecheck:next",
     "lint": "tsx scripts/lint.ts",
     "test:regression": "tsx scripts/verify-regression.ts",
-    "typecheck:next": "tsc -p tsconfig.json --noEmit"
+    "typecheck:next": "tsc -p tsconfig.json --noEmit",
+    "verify": "tsx scripts/verify.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",
