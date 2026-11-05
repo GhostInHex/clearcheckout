@@ -8,11 +8,11 @@ import assert from 'node:assert/strict';
 import {z} from 'zod';
 import Database from 'better-sqlite3';
 const dir=mkdtempSync(`${tmpdir()}/cc-p05-`);const listener=createServer();await new Promise<void>(resolve=>listener.listen(0,'127.0.0.1',resolve));const address=listener.address();if(!address||typeof address==='string')throw Error('No port');await new Promise<void>(resolve=>listener.close(()=>resolve()));const base=`http://127.0.0.1:${address.port}`;
-writeFileSync(`${dir}/mail-preload.cjs`, `if(process.env.NODE_ENV!=="test")throw Error("Test fixture requires test mode");globalThis.clearcheckoutTestMail={available:true,async send(message){require("node:fs").appendFileSync(${JSON.stringify(`${dir}/inbox.jsonl`)},JSON.stringify(message)+"\\n");}};`);
-const server=spawn(process.execPath,['--require',`${dir}/mail-preload.cjs`,'--import','tsx','scripts/next-start.ts'],{env:{PATH:process.env.PATH,NODE_ENV:'test',HOSTNAME:'127.0.0.1',PORT:String(address.port),HOME:process.env.HOME,DB_PATH:`${dir}/db.sqlite`,PUBLIC_ORIGIN:base},stdio:'ignore'});
+writeFileSync(`${dir}/mail-preload.cjs`, `if(process.env.NODE_ENV!=="test"||process.env.DB_PATH!==${JSON.stringify(`${dir}/db.sqlite`)}||process.env.HOSTNAME!=="127.0.0.1")throw Error("Test fixture requires test mode");globalThis.clearcheckoutTestMail={available:true,async send(message){require("node:fs").appendFileSync(${JSON.stringify(`${dir}/inbox.jsonl`)},JSON.stringify(message)+"\\n");}};`);
+const server=spawn(process.execPath,['--require',`${dir}/mail-preload.cjs`,'--import','tsx','scripts/next-start.ts'],{env:{PATH:process.env.PATH,NODE_ENV:'test',HOSTNAME:'127.0.0.1',PORT:String(address.port),HOME:process.env.HOME,DB_PATH:`${dir}/db.sqlite`,PUBLIC_ORIGIN:base},stdio:'inherit'});
 const browser=await chromium.launch({headless:true});mkdirSync('artifacts/program/P05/review',{recursive:true});mkdirSync('artifacts/program/P05/recovery-continuation',{recursive:true});
 try{
- const context=await browser.newContext();const page=await context.newPage();let ready=false;for(let i=0;i<100;i++){try{await page.goto(`${base}/account/recover`);ready=true;break;}catch{if(server.exitCode!==null)throw Error('Server exited');}}assert.ok(ready);
+ const context=await browser.newContext();const page=await context.newPage();let ready=false;for(let i=0;i<300;i++){try{await page.goto(`${base}/account/recover`);ready=true;break;}catch{if(server.exitCode!==null)throw Error('Server exited');await new Promise(resolve=>setTimeout(resolve,100));}}assert.ok(ready);
  const signup=await page.request.post(`${base}/api/signup`,{headers:{'x-clearcheckout':'1',origin:base},data:{email:'synthetic@example.test',password:'synthetic-password'}});assert.equal(signup.status(),201);
  const headers={'x-clearcheckout':'1',origin:base};
  await page.goto(`${base}/account/recover`);
