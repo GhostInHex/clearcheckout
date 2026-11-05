@@ -61,7 +61,8 @@ export async function handle(request:Request){
  if(path==='/api/payments/review'&&method==='POST'){const input=z.object({orderId:z.string(),requestKey:z.string()}).strict().parse(body);return reply(service.payments.review(user.id,input.orderId,input.requestKey));}
  const paymentPath=/^\/api\/payments\/([^/]+)(?:\/(confirm|begin|capture|reconcile|cancel))?$/.exec(path);
  if(paymentPath){const id=z.string().parse(paymentPath[1]),operation=paymentPath[2];if(method==='GET'&&!operation)return reply(service.payments.read(user.id,id));if(method==='POST'){
- if(operation==='confirm'||operation==='cancel')return reply(service.payments.command(user.id,id,body));
+ if(operation==='confirm')return reply(service.payments.command(user.id,id,z.object({type:z.literal('confirm'),revision:z.number().int().positive(),phrase:z.string().max(80)}).strict().parse(body)));
+ if(operation==='cancel')return reply(service.payments.command(user.id,id,z.object({type:z.literal('cancel')}).strict().parse(body)));
  if(operation==='begin')return reply(await service.payments.begin(user.id,id));
  if(operation==='capture'){const callback=z.object({token:z.string()}).strict().parse(body);return reply(await service.payments.approve(user.id,id,callback.token));}
  if(operation==='reconcile')return reply(await service.payments.reconcile(user.id,id));
