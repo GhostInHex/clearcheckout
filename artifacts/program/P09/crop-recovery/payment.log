@@ -1,0 +1,5 @@
+
+> clearcheckout@1.0.0 test:paypal-mocked
+> tsx tests/paypal-browser.ts
+
+✓ Running next.config.ts took 33ms

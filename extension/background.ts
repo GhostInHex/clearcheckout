@@ -32,3 +32,39 @@ chrome.runtime.onMessage.addListener((input:unknown,sender,reply)=>{
  void run().then(reply,()=>reply({error:'Link unavailable. Check permission, account approval and code expiry.'})).finally(()=>{busy=false;});
  return true;
 });
+
+import {cropRequest,fixtureUrl,inspectFixture} from './crop.js';
+let capturing=false;
+chrome.runtime.onMessage.addListener((input:unknown,sender,reply)=>{
+ const parsed=cropRequest.safeParse(input);
+ if(!parsed.success||sender.id!==chrome.runtime.id||sender.frameId!==0||sender.url!==fixtureUrl||sender.tab?.url!==fixtureUrl||sender.tab.id===undefined)return false;
+ if(capturing){reply({error:'Capture already pending.'});return false;}
+ const nonce=parsed.data.nonce;
+ const tabId=sender.tab.id;
+ const windowId=sender.tab.windowId;
+ capturing=true;
+ async function run(){
+  const tab=await chrome.tabs.get(tabId);
+  if(!tab.active||tab.url!==fixtureUrl)throw Error('Tab changed.');
+  const [before]=await chrome.scripting.executeScript({target:{tabId},func:inspectFixture});
+  if(!before?.result)throw Error('Unsafe fixture.');
+  const screenshot=await chrome.tabs.captureVisibleTab(windowId,{format:'png'});
+  const active=await chrome.tabs.query({active:true,windowId});
+  if(active.length!==1||active[0]?.id!==tabId||active[0].url!==fixtureUrl)throw Error('Tab changed.');
+  const [after]=await chrome.scripting.executeScript({target:{tabId},func:inspectFixture});
+  if(JSON.stringify(before.result)!==JSON.stringify(after?.result))throw Error('Fixture changed.');
+  const blob=await (await fetch(screenshot)).blob();
+  const bitmap=await createImageBitmap(blob);
+  try{
+   if(bitmap.width!==before.result.width||bitmap.height!==before.result.height)throw Error('Viewport changed.');
+   const canvas=new OffscreenCanvas(64,64);const ctx=canvas.getContext('2d');if(!ctx)throw Error('Canvas unavailable.');
+   ctx.drawImage(bitmap,32,32,64,64,0,0,64,64);
+   const png=await canvas.convertToBlob({type:'image/png'});
+   const bytes=new Uint8Array(await png.arrayBuffer());
+   if(bytes.length>75000)throw Error('Crop too large.');
+   return {kind:'local-preview',nonce,png:'data:image/png;base64,'+btoa(Array.from(bytes,byte=>String.fromCharCode(byte)).join('')),width:64,height:64};
+  }finally{bitmap.close();}
+ }
+ void run().then(reply,()=>reply({error:'Local capture refused. Use the unchanged synthetic fixture at 100% scale.'})).finally(()=>{capturing=false;});
+ return true;
+});

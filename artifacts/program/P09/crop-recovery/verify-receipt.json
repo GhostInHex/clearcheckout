@@ -1,0 +1,52 @@
+{
+  "sha": "eb160d575ba95e6e90a262f0ddd956ad13a393f3",
+  "initialDirty": " M extension/background.ts\n M extension/content.ts\n?? extension/crop.ts\n?? public/fixtures/\n?? tests/extension-crop-browser.ts\n",
+  "dirty": " M extension/background.ts\n M extension/content.ts\n?? extension/crop.ts\n?? public/fixtures/\n?? tests/extension-crop-browser.ts\n",
+  "passed": true,
+  "results": [
+    {
+      "command": "next typegen",
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "typecheck",
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "lint",
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "build",
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "test",
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "regression",
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "security",
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "restart-downloads",
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "framework": "Next.js production",
+  "limitations": [
+    "No screen-reader or toolbar activeTab manual verification"
+  ]
+}

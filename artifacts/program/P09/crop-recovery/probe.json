@@ -1,0 +1,12 @@
+{
+  "installed": true,
+  "actualNext": true,
+  "result": "Local capture refused. Fixture may be unsafe or changed.",
+  "captureProbe": {
+    "ok": false,
+    "error": "Either the '<all_urls>' or 'activeTab' permission is required."
+  },
+  "uploads": 0,
+  "permission": "fixed localhost host only; no automated toolbar gesture",
+  "providerCalls": 0
+}

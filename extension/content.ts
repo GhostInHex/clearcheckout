@@ -1,3 +1,4 @@
+import {fixtureUrl,previewResult} from './crop.js';
 import {scan,repair,observeRepairs,clearRepairs,runCommand,keyboardCommand} from '../shared/dom.js';
 const existingHost=document.getElementById('clearcheckout-host');
 if(existingHost) existingHost.dispatchEvent(new Event('clearcheckout-close'));
@@ -11,7 +12,25 @@ element('scan').onclick=()=>{const findings=scan(document);announce(`${findings.
 element('repair').onclick=()=>{const result=repair(document);stop();stop=observeRepairs(document);announce(`${result.repaired} labels repaired. ${result.unknown} unknown controls unchanged. Repairs stay active.`);};
 const keyboard=(e:KeyboardEvent)=>{const command=keyboardCommand(e);if(command){e.preventDefault();announce(runCommand(document,command));}};document.addEventListener('keydown',keyboard);
 root.querySelectorAll('[data-command]').forEach(button=>{if(button instanceof HTMLButtonElement)button.onclick=()=>announce(runCommand(document,button.dataset.command ?? ''));});
-const close=()=>{stop();clearRepairs(document);document.removeEventListener('keydown',keyboard);host.remove();if(previousFocus instanceof HTMLElement && previousFocus.isConnected)previousFocus.focus();};element('close').onclick=close;host.addEventListener('clearcheckout-close',close);
+let closed=false;
+const close=()=>{closed=true;stop();clearRepairs(document);document.removeEventListener('keydown',keyboard);host.remove();if(previousFocus instanceof HTMLElement && previousFocus.isConnected)previousFocus.focus();};element('close').onclick=close;host.addEventListener('clearcheckout-close',close);
+if(location.href===fixtureUrl){
+ const capture=document.createElement('button');capture.textContent='Preview synthetic crop locally';
+ const preview=document.createElement('img');preview.alt='Local synthetic control crop. No upload.';preview.hidden=true;
+ const warning=document.createElement('p');warning.textContent='Uploads and suggestions remain disabled. This preview stays local.';
+ element('status').after(capture,preview,warning);
+ capture.onclick=async()=>{
+  preview.hidden=true;preview.removeAttribute('src');capture.disabled=true;
+  const nonce=Array.from(crypto.getRandomValues(new Uint8Array(32)),byte=>byte.toString(16).padStart(2,'0')).join('');
+  try{
+   const result=previewResult.safeParse(await chrome.runtime.sendMessage({kind:'crop-preview',nonce}));
+   if(closed)return;
+   if(!result.success||result.data.nonce!==nonce)throw Error('Capture refused.');
+   preview.src=result.data.png;preview.hidden=false;announce('Local preview ready. Nothing uploaded.');
+  }catch{if(!closed)announce('Local capture refused. Fixture may be unsafe or changed.');}
+  finally{capture.disabled=false;}
+ };
+}
 element('close').focus();
 const large=element('large');if(!(large instanceof HTMLInputElement))throw new Error('Missing text size input');
 const section=root.querySelector('section');if(!section)throw new Error('Missing panel section');chrome.storage.local.get('large').then(value=>{large.checked=Boolean(value.large);section.style.fontSize=large.checked?'20px':'16px';});large.onchange=()=>{section.style.fontSize=large.checked?'20px':'16px';chrome.storage.local.set({large:large.checked});};
