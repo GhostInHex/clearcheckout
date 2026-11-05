@@ -1,3 +1,4 @@
+import {createExtensionDevices} from './extension-devices.js';
 import {createAuth,hashPassword,checkPassword,type MailAdapter} from './auth.js';
 import {createSandboxPayPal,type SandboxConfig} from './paypal.js';
 import {createPayments,type PaymentProvider} from './orders.js';
@@ -17,9 +18,9 @@ export class ServiceError extends Error {
   constructor(readonly status:number,message:string){super(message);}
 }
 function fail(status:number,message:string):never {throw new ServiceError(status,message);}
-export type ServiceOptions={sandbox?:SandboxConfig|undefined;mail?:MailAdapter|undefined;appOrigin?:string|undefined;paymentProvider?:PaymentProvider|undefined;dbPath?:string;aiOptions?:ProviderOptions;mediaOptions?:ProviderOptions & {dataDir?:string}};
+export type ServiceOptions={approvedExtensionId?:string|undefined;sandbox?:SandboxConfig|undefined;mail?:MailAdapter|undefined;appOrigin?:string|undefined;paymentProvider?:PaymentProvider|undefined;dbPath?:string;aiOptions?:ProviderOptions;mediaOptions?:ProviderOptions & {dataDir?:string}};
 const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
-export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,mediaOptions,paymentProvider,mail,appOrigin,sandbox}:ServiceOptions={}) {
+export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,mediaOptions,paymentProvider,mail,appOrigin,sandbox,approvedExtensionId}:ServiceOptions={}) {
   if (dbPath !== ':memory:') mkdirSync(path.dirname(dbPath),{recursive:true});
   const db = new Database(dbPath);
   try {
@@ -92,6 +93,7 @@ export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,medi
     const value=order(user,id);
     try {const next=transition(value,action);if(action.type==='change' || action.type==='cancel' || action.type==='confirm')payments.invalidate(id);return save({...next,id:value.id},user);}catch(error){fail(409,error instanceof Error ? error.message : String(error));}
   });
+  const devices=createExtensionDevices(db,{approvedId:approvedExtensionId,fail});
   const auth=createAuth(db,{mail,origin:appOrigin});
-  return {db,auth,ai,media,payments,publicUser,authenticate,issueSession,signup,login,logout,setPreferences,orders,order,createOrder,updateOrder};
+  return {db,devices,auth,ai,media,payments,publicUser,authenticate,issueSession,signup,login,logout,setPreferences,orders,order,createOrder,updateOrder};
 }
