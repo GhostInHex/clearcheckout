@@ -1,3 +1,4 @@
+import {createPayments,type PaymentProvider} from './orders.js';
 import {migrate} from './migrations/index.js';
 import Database from 'better-sqlite3';
 import {randomBytes, scryptSync, timingSafeEqual, createHash} from 'node:crypto';
@@ -14,9 +15,9 @@ export class ServiceError extends Error {
   constructor(readonly status:number,message:string){super(message);}
 }
 function fail(status:number,message:string):never {throw new ServiceError(status,message);}
-export type ServiceOptions={dbPath?:string;aiOptions?:ProviderOptions;mediaOptions?:ProviderOptions & {dataDir?:string}};
+export type ServiceOptions={paymentProvider?:PaymentProvider;dbPath?:string;aiOptions?:ProviderOptions;mediaOptions?:ProviderOptions & {dataDir?:string}};
 const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
-export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,mediaOptions}:ServiceOptions={}) {
+export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,mediaOptions,paymentProvider}:ServiceOptions={}) {
   if (dbPath !== ':memory:') mkdirSync(path.dirname(dbPath),{recursive:true});
   const db = new Database(dbPath);
   try {
@@ -85,9 +86,10 @@ export function createService({dbPath='data/clearcheckout.sqlite',aiOptions,medi
     db.prepare('INSERT INTO orders VALUES(?,?,?,?)').run(value.id,user.id,JSON.stringify(value),Date.now());
     return save(value,user);
   }
-  function updateOrder(user:User,id:string,action:CheckoutRequest) {
+  const payments=createPayments(db,(userId,id)=>order(findUser(userId),id),paymentProvider);
+  const updateOrder=db.transaction((user:User,id:string,action:CheckoutRequest) => {
     const value=order(user,id);
-    try {return save({...transition(value,action),id:value.id},user);}catch(error){fail(409,error instanceof Error ? error.message : String(error));}
-  }
-  return {db,ai,media,publicUser,authenticate,issueSession,signup,login,logout,setPreferences,orders,order,createOrder,updateOrder};
+    try {const next=transition(value,action);if(action.type==='change' || action.type==='cancel' || action.type==='confirm')payments.invalidate(id);return save({...next,id:value.id},user);}catch(error){fail(409,error instanceof Error ? error.message : String(error));}
+  });
+  return {db,ai,media,payments,publicUser,authenticate,issueSession,signup,login,logout,setPreferences,orders,order,createOrder,updateOrder};
 }

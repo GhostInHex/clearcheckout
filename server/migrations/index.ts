@@ -12,6 +12,12 @@ export const migrations: readonly Migration[] = [
     INSERT INTO schema_migrations VALUES(1,'baseline',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
     INSERT INTO schema_migrations VALUES(2,'migration-history',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
   `},
+  {version:3,name:'payment-attempts',sql:`
+    CREATE TABLE payment_attempts(id TEXT PRIMARY KEY,order_id TEXT NOT NULL,user_id TEXT NOT NULL,request_key TEXT NOT NULL UNIQUE,state TEXT NOT NULL,body TEXT NOT NULL);
+    CREATE UNIQUE INDEX payment_one_active ON payment_attempts(order_id) WHERE state NOT IN ('failed','cancelled');
+    CREATE UNIQUE INDEX payment_provider_identity ON payment_attempts(json_extract(body,'$.state.providerId')) WHERE json_extract(body,'$.state.providerId') IS NOT NULL;
+    INSERT INTO schema_migrations VALUES(3,'payment-attempts',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+  `},
 ];
 
 export function migrate(db:Database.Database,steps:readonly Migration[]=migrations):void {
