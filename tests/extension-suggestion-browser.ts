@@ -59,6 +59,9 @@ try{
  await page.getByRole('button',{name:'Upload this synthetic crop for a suggestion'}).click();await expect(page.getByRole('status')).toContainText('Suggestion unavailable');
  assert.equal(readFileSync(folder+'/db.sqlite.labels','utf8').trim().split('\n').length,1);
 
+ await page.evaluate(()=>history.pushState({},'', '/fixtures/changed'));
+ await expect(page.getByRole('status')).toContainText('Page changed');await expect(page.getByRole('button',{name:'Accept reviewed label'})).toBeHidden();
+ await page.evaluate(()=>history.replaceState({},'', '/fixtures/label-crop.html'));
  await page.evaluate(()=>{const style=document.createElement('style');style.textContent='#fixture-control{background:red!important}';document.head.append(style);});
  await page.waitForTimeout(1100);await page.getByRole('button',{name:'Preview synthetic crop locally'}).click();await expect(page.getByRole('status')).toContainText('Local capture refused');
  assert.equal(readFileSync(folder+'/db.sqlite.labels','utf8').trim().split('\n').length,1);

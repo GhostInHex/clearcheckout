@@ -23,12 +23,13 @@ if(location.href===fixtureUrl){
  const accept=document.createElement('button');accept.textContent='Accept reviewed label';accept.hidden=true;
  let pending:{nonce:string;target:HTMLButtonElement;markup:string}|undefined;let suggestion='';let owned:HTMLButtonElement|undefined;let ownedText='';
  const reset=()=>{pending=undefined;suggestion='';upload.hidden=true;accept.hidden=true;preview.hidden=true;preview.removeAttribute('src');};
+ const locationTimer=setInterval(()=>{if(location.href!==fixtureUrl&&(pending||owned)){undo();reset();announce('Page changed. Preview and suggestion cleared.');}},250);
  const undo=()=>{if(owned?.getAttribute('aria-label')===ownedText)owned.removeAttribute('aria-label');owned=undefined;};
  const observer=new MutationObserver(()=>{if(pending&&(!inspectFixture()||!pending.target.isConnected||pending.target.outerHTML!==pending.markup||location.href!==fixtureUrl)){reset();announce('Fixture changed. Preview and suggestion cleared.');}});observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,characterData:true});
- host.addEventListener('clearcheckout-close',()=>{observer.disconnect();undo();reset();});
- element('close').addEventListener('click',()=>{observer.disconnect();undo();reset();});
- upload.onclick=async()=>{const value=pending;if(!value)return;upload.hidden=true;try{const advice=labelAdvice.parse(await chrome.runtime.sendMessage({kind:'suggest-fixture',nonce:value.nonce}));if(closed||pending!==value||!value.target.isConnected||value.target.outerHTML!==value.markup)return;announce('Possible label: '+advice.text+'. Review before accepting.');if(advice.text.toLowerCase()!=='unknown'){suggestion=advice.text;accept.hidden=false;}}catch{if(!closed)announce('Suggestion unavailable. Keep the label unknown.');}};
- accept.onclick=()=>{const value=pending;if(!value||!suggestion||!value.target.isConnected||value.target.outerHTML!==value.markup)return;owned=value.target;ownedText=suggestion;pending=undefined;owned.setAttribute('aria-label',ownedText);accept.hidden=true;announce('Reviewed label applied. Close assistance to undo owned labels.');};
+ host.addEventListener('clearcheckout-close',()=>{clearInterval(locationTimer);observer.disconnect();undo();reset();});
+ element('close').addEventListener('click',()=>{clearInterval(locationTimer);observer.disconnect();undo();reset();});
+ upload.onclick=async()=>{const value=pending;if(!value||location.href!==fixtureUrl||!inspectFixture())return;upload.hidden=true;try{const advice=labelAdvice.parse(await chrome.runtime.sendMessage({kind:'suggest-fixture',nonce:value.nonce}));if(closed||location.href!==fixtureUrl||!inspectFixture()||pending!==value||!value.target.isConnected||value.target.outerHTML!==value.markup)return;announce('Possible label: '+advice.text+'. Review before accepting.');if(advice.text.toLowerCase()!=='unknown'){suggestion=advice.text;accept.hidden=false;}}catch{if(!closed)announce('Suggestion unavailable. Keep the label unknown.');}};
+ accept.onclick=()=>{const value=pending;if(!value||location.href!==fixtureUrl||!inspectFixture()||!suggestion||!value.target.isConnected||value.target.outerHTML!==value.markup)return;owned=value.target;ownedText=suggestion;pending=undefined;owned.setAttribute('aria-label',ownedText);accept.hidden=true;announce('Reviewed label applied. Close assistance to undo owned labels.');};
  element('status').after(capture,preview,warning,upload,accept);
  capture.onclick=async()=>{
   reset();capture.disabled=true;
