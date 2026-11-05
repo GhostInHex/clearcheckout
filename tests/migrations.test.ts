@@ -10,32 +10,32 @@ import {createService} from '../server/service.js';
 const currentVersion=migrations.at(-1)?.version;
 assert.ok(currentVersion);
 
-test('fresh installation and populated v1 preserve all durable rows on reopen',()=>{
+test('fresh installation and populated v1 preserve all durable rows on reopen',async()=>{
  const dir=mkdtempSync(`${tmpdir()}/cc-migration-`);const file=`${dir}/test.sqlite`;
  try {
   const service=createService({dbPath:file});
-  const user=service.signup({email:'synthetic@example.test',password:'synthetic-password'});
+  const user=await service.signup({email:'synthetic@example.test',password:'synthetic-password'});
   const token=service.issueSession(user.id);
   service.db.prepare("INSERT INTO orders VALUES('synthetic',?, ?,1)").run(user.id,JSON.stringify({history:['synthetic']}));
   service.db.prepare("INSERT INTO ai_calls VALUES('call',?,'cache',1,50000,'reserved',NULL,NULL,NULL)").run(user.id);
   service.db.prepare('UPDATE ai_safety SET blocked=1').run();
-  service.db.exec('DROP TABLE payment_attempts; DROP TABLE schema_migrations; PRAGMA user_version=1');
   const tables=['users','sessions','orders','ai_calls','ai_safety'];
   const before=tables.map(table=>service.db.prepare(`SELECT * FROM ${table}`).all());
+  service.db.exec('DROP TABLE payment_attempts; DROP TABLE account_tokens; DROP TABLE account_mail_limits; ALTER TABLE users DROP COLUMN email_verified; DROP TABLE schema_migrations; PRAGMA user_version=1');
   service.db.close();
   for(let i=0;i<2;i++){
    const reopened=createService({dbPath:file});
    assert.equal(reopened.db.pragma('user_version',{simple:true}),currentVersion);
    assert.deepEqual(tables.map(table=>reopened.db.prepare(`SELECT * FROM ${table}`).all()),before);
    assert.equal(reopened.authenticate(token)?.id,user.id);
-   assert.equal(reopened.login({email:user.email,password:'synthetic-password'}).id,user.id);
+   assert.equal((await reopened.login({email:user.email,password:'synthetic-password'})).id,user.id);
    assert.equal(reopened.db.prepare('SELECT * FROM schema_migrations').all().length,migrations.length);
    reopened.db.close();
   }
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 
-test('failed ordered SQL rolls back DDL, rows and version and can retry',()=>{
+test('failed ordered SQL rolls back DDL, rows and version and can retry',async()=>{
  const db=new Database(':memory:');
  try {
   const first={version:1,name:'one',sql:'CREATE TABLE fixture(value TEXT); INSERT INTO fixture VALUES(\'kept\');'};
@@ -49,7 +49,7 @@ test('failed ordered SQL rolls back DDL, rows and version and can retry',()=>{
  }finally{db.close();}
 });
 
-test('unsupported future schema is refused without mutations',()=>{
+test('unsupported future schema is refused without mutations',async()=>{
  const db=new Database(':memory:');
  try{db.exec('PRAGMA user_version=99; CREATE TABLE sentinel(value);');assert.throws(()=>migrate(db),/Unsupported/);assert.equal(db.pragma('user_version',{simple:true}),99);assert.deepEqual(db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all(),[{name:'sentinel'}]);}finally{db.close();}
 });
@@ -67,8 +67,8 @@ test('concurrent writers recheck version after acquiring immediate lock',async()
  }finally{if(db.inTransaction)db.exec('ROLLBACK');db.close();rmSync(dir,{recursive:true,force:true});}
 });
 
-test('version 2 upgrades to payment schema without altering orders',()=>{
+test('version 2 upgrades to payment schema without altering orders',async()=>{
  const db=new Database(':memory:');
- assert.equal(migrations.at(-1)?.version,3);
+ assert.equal(migrations.find(migration=>migration.version===3)?.version,3);
  try{migrate(db,migrations.slice(0,2));db.prepare('INSERT INTO orders VALUES(?,?,?,?)').run('order','user','synthetic-body',1);migrate(db);migrate(db);assert.equal(db.pragma('user_version',{simple:true}),currentVersion);assert.deepEqual(db.prepare('SELECT * FROM orders').all(),[{id:'order',user_id:'user',body:'synthetic-body',created:1}]);assert.equal(db.prepare('SELECT * FROM payment_attempts').all().length,0);}finally{db.close();}
 });

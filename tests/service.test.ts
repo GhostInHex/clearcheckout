@@ -6,12 +6,12 @@ import {createHash} from 'node:crypto';
 import {createService,ServiceError} from '../server/service.js';
 import {z} from 'zod';
 
-test('framework-independent service preserves sessions, revisions and ownership across reopen',()=>{
+test('framework-independent service preserves sessions, revisions and ownership across reopen',async()=>{
   const dir=mkdtempSync(tmpdir()+'/cc-service-');
   const options={dbPath:dir+'/db.sqlite',aiOptions:{config:{key:'',budgetMicros:0,callLimit:0}}};
   let service=createService(options);
   try {
-    const account=service.signup({email:'OWNER@example.com',password:'correctpassword'});
+    const account=await service.signup({email:'OWNER@example.com',password:'correctpassword'});
     assert.equal(account.email,'owner@example.com');
     const token=service.issueSession(account.id);
     const stored=z.object({token:z.string()}).parse(service.db.prepare('SELECT token FROM sessions').get());
@@ -28,7 +28,7 @@ test('framework-independent service preserves sessions, revisions and ownership 
     const reviewed=service.updateOrder(user,order.id,{type:'review'});
     assert.throws(()=>service.updateOrder(user,order.id,{type:'confirm',phrase:reviewed.phrase+' ',revision:reviewed.revision,outcome:'success'}),error=>error instanceof ServiceError && error.status===409);
     service.updateOrder(user,order.id,{type:'confirm',phrase:reviewed.phrase,revision:reviewed.revision,outcome:'success'});
-    const other=service.signup({email:'other@example.com',password:'correctpassword'});
+    const other=await service.signup({email:'other@example.com',password:'correctpassword'});
     const otherUser=service.authenticate(service.issueSession(other.id));
     assert(otherUser);
     assert.throws(()=>service.order(otherUser,order.id),error=>error instanceof ServiceError && error.status===404);
