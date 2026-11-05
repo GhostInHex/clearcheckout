@@ -1,3 +1,4 @@
+'use client';
 import {deliverySchema} from '../shared/checkout-schema.js';
 import {z} from 'zod';
 import {publicUserSchema,orderSchema,checkoutResponseSchema,explanationSchema,errorSchema,errorMessage,preferencesSchema,type PublicUser,type CheckoutResponse} from '../shared/api-schema.js';
@@ -5,7 +6,7 @@ import type {CheckoutRequest} from '../shared/checkout.js';
 import VoiceNavigation from './VoiceNavigation.js';
 import VisualExplorer from './VisualExplorer.js';
 import React, {useState,useEffect,useRef} from 'react';
-import {createRoot} from 'react-dom/client';
+
 import {scan,repair,observeRepairs,runCommand,keyboardCommand} from '../shared/dom.js';
 import {money,catalog} from '../shared/checkout.js';
 import './style.css';
@@ -17,11 +18,12 @@ function Icon({type='spark',...props}: React.SVGProps<SVGSVGElement> & {type?:st
   const paths:Record<string,string>={spark:'m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z',arrow:'M5 12h14m-6-6 6 6-6 6',check:'m5 12 4 4L19 6',eye:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',shield:'m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z m-4 9 3 3 5-6',bag:'M5 7h14l1 14H4L5 7Zm3 0V5a4 4 0 0 1 8 0v2'};
   return <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}><path d={paths[type] || paths.spark}/></svg>;
 }
-function App(){
+export default function App(){
   const [user,setUser]=useState<PublicUser|null>(null),[page,setPage]=useState('home'),[ready,setReady]=useState(false),[message,setMessage]=useState('');
-  useEffect(()=>{api(publicUserSchema,'/me').then(u=>{setUser(u);setPage(u.onboarded?'dashboard':'onboarding');}).catch(()=>{}).finally(()=>setReady(true));},[]);
-  const go=(p:string)=>{setPage(p);setMessage('');window.scrollTo(0,0);};
+  useEffect(()=>{api(publicUserSchema,'/me').then(u=>{setUser(u);setPage(u.onboarded?(location.pathname==='/'?'dashboard':location.pathname.slice(1)):'onboarding');}).catch(()=>{setPage(['login','signup'].includes(location.pathname.slice(1))?location.pathname.slice(1):'home');}).finally(()=>setReady(true));},[]);
+  const go=(p:string)=>{setPage(p);history.pushState(null,'',p==='home'?'/':`/${p}`);setMessage('');window.scrollTo(0,0);};
   useEffect(()=>{if(ready) document.getElementById('main-title')?.focus();},[page,ready]);
+  useEffect(()=>{const back=()=>setPage(location.pathname==='/'?'home':location.pathname.slice(1));window.addEventListener('popstate',back);return ()=>window.removeEventListener('popstate',back);},[]);
   const prefs=user?.preferences;
   return <div className={`${prefs?.contrast?'high-contrast':''} text-${prefs?.textSize || 'standard'}`}>
     <a className="skip" href="#main">Skip to content</a>
@@ -78,6 +80,3 @@ function Demo({user}:{user:PublicUser}){
  <section className="card order-review"><span className="eyebrow">YOUR FINAL SAY</span><h2 tabIndex={-1} data-checkout-review>Review and confirm</h2><p className="state-label">Status: {order.state.replaceAll('_',' ')}</p>{order.state==='awaiting_confirmation'?<><div className="order-readback"><h3>Your order, read back</h3><ul>{order.quote.items.filter(i=>i.quantity>0).map(i=><li key={i.id}>{i.quantity} × {i.name} · {money(i.price*i.quantity)}</li>)}</ul><p>{order.delivery} delivery · {money(order.quote.shipping)}</p><strong>Total {money(order.quote.total)} USD</strong><p>Simulated payment. No merchant or payment provider is contacted.</p></div><form onSubmit={e=>{e.preventDefault();action({type:'confirm',phrase,revision:order.revision,outcome:fail?'fail':'success'});}}><label htmlFor="confirm">Type exactly <strong>{order.phrase}</strong></label><input id="confirm" value={phrase} onChange={e=>setPhrase(e.target.value)} required autoComplete="off" spellCheck="false" aria-describedby="confirm-help"/><small id="confirm-help">Any cart or delivery change requires a new review.</small><label className="failure-option"><input type="checkbox" checked={fail} onChange={e=>setFail(e.target.checked)}/>Simulate a payment failure for testing</label><button className="button" disabled={busy}>Confirm simulated payment <Icon type="check"/></button></form></>:terminal?<div className="completed"><Icon type="check"/><h3>Demo completed.</h3><p>Your simulated order of {money(order.quote.total)} is complete. No money moved and no real order was placed.</p><button className="button" disabled={busy} onClick={start}>Start another demo</button></div>:<><p>{order.state==='failed'?'The simulated payment failed. Review the order to retry.':order.state==='cancelled'?'You cancelled this demo. Review again if you want to continue.':'Read the items, delivery, and total before confirming.'}</p><button className="button" disabled={busy} onClick={()=>action({type:'review'})}>Review my order <Icon type="arrow"/></button></>}{!terminal&&order.state!=='cancelled'&&<button className="text-button cancel" disabled={busy} onClick={()=>action({type:'cancel'})}>Cancel demo checkout</button>}</section></>}
  </div><aside className="clarity-panel" data-clearcheckout-panel><div className="panel-brand"><Icon type="spark"/> YOUR CLARITY COMPANION</div><h2>A little help, right here.</h2><p>{user.preferences.guidance==='detailed'?'Scan for unnamed controls, apply reliable labels, and move through checkout at your own pace.':'Scan. Repair. Navigate. You decide.'}</p><div className="panel-actions"><button className="button secondary" onClick={scanPage}>Scan demo controls</button><button className="button" onClick={repairPage}>Repair reliable labels <Icon type="spark"/></button></div>{repairEnabled&&<p className="repair-status"><Icon type="check"/> Repairs stay active on rerender.</p>}{findings.length>0&&<ul className="findings">{findings.map((f,i)=><li key={i}>{f.description}</li>)}</ul>}<div className="panel-status" role="status" aria-live="polite" aria-atomic="true">{notice}</div><p className="error" role="alert">{error}</p><VoiceNavigation onCommand={command=>setNotice(command==='total'?`Trusted total ${order?money(order.quote.total):'unavailable'}.`:runCommand(store.current,command ?? ''))}/><VisualExplorer/><MetaExplanation key={JSON.stringify(order)} order={order}/><h3>Go at your pace</h3>{[['cart','C'],['delivery','D'],['review','R']].map(([command,key])=><button className="command" key={command} onClick={()=>setNotice(runCommand(store.current,command ?? ''))}><span>Go to {command}</span><kbd>Alt ⇧ {key}</kbd></button>)}<div className="privacy-note"><Icon type="shield"/><small>Control repairs run locally. Optional Meta AI sends only your approved demo order summary. No field values, passwords, or card details are scanned or uploaded.</small></div></aside></div></section>;
 }
-const root=document.getElementById('root');
-if(!root)throw new Error('Missing app root');
-createRoot(root).render(<App/>);

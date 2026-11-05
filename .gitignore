@@ -5,3 +5,8 @@ data/
 .env
 artifacts/
 .vercel/
+
+.next/
+public/extension/
+public/clearcheckout-extension.zip
+*.tsbuildinfo

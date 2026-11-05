@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx server/index.ts",
-    "build": "vite build && tsx scripts/build-extension.ts && npm run build:server",
-    "start": "NODE_ENV=production node build/server/server/index.js",
+    "dev": "next dev",
+    "build": "tsx scripts/build-extension.ts && tsx scripts/prepare-next-assets.ts && next build --webpack",
+    "start": "next start",
     "test": "tsx --test tests/*.test.ts",
     "test:browser": "tsx tests/browser.ts",
     "test:dom": "tsx tests/dom-browser.ts",
@@ -23,17 +23,21 @@
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.node-tests.json",
     "typecheck:frontend": "tsc -p tsconfig.frontend.json",
     "typecheck:extension": "tsc -p tsconfig.extension.json",
-    "typecheck": "npm run typecheck:frontend && npm run typecheck:extension && npm run typecheck:server && npm run typecheck:checkout && tsx scripts/verify-sources.ts",
+    "typecheck": "npm run typecheck:frontend && npm run typecheck:extension && npm run typecheck:server && npm run typecheck:checkout && tsx scripts/verify-sources.ts && npm run typecheck:next",
     "lint": "tsx scripts/lint.ts",
-    "test:regression": "tsx scripts/verify-regression.ts"
+    "test:regression": "tsx scripts/verify-regression.ts",
+    "build:legacy": "vite build && tsx scripts/build-extension.ts && npm run build:server",
+    "typecheck:next": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",
     "express": "^5.1.0",
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "next": "^16.4.5",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1",
     "zod": "^4.1.12"
   },
   "devDependencies": {
