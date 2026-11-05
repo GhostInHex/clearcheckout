@@ -50,7 +50,9 @@ export function mountLabelMemory(container:HTMLElement,root:ParentNode,announce:
     if(disposed||ticket!==generation)return;
     const label=control.element.getAttribute('data-checkout-label');
     if(!label||identities.filter(item=>item.key===value.key).length!==1)continue;
-    const approve=doc.createElement('button');approve.textContent=`Remember reviewed label: ${label}`;
+    const row=doc.createElement('div');row.setAttribute('role','group');row.setAttribute('aria-label',label);
+    const description=doc.createElement('p');description.textContent=label;row.append(description);
+    const approve=doc.createElement('button');approve.textContent='Remember reviewed label';
     approve.onclick=()=>{void (async()=>{
      try{
       const current=candidates(root).find(item=>item.element===control.element);
@@ -59,7 +61,7 @@ export function mountLabelMemory(container:HTMLElement,root:ParentNode,announce:
       if(stored.length>=20){announce('Memory is full. Forget labels before adding more.');return;}
       save([...stored,{...value,label,expires:clock()+lifetime}]);announce(`Approved label remembered: ${label}.`);
      }catch{announce('Local label saving unavailable.');}
-    })();};list.append(approve);
+    })();};row.append(approve);list.append(row);
     const entry=valid.find(item=>item.key===value.key);
     if(restore&&entry)applyApprovedLabel(control);
    }
