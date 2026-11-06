@@ -8,6 +8,8 @@
     "server/**/*.ts",
     "scripts/verify-compiled-server.ts",
     "tests/node-helpers.ts",
-    "scripts/verify.ts"
+    "scripts/verify.ts",
+    "scripts/backup.ts",
+    "scripts/verify-backup.ts"
   ]
 }
