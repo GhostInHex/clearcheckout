@@ -6,6 +6,7 @@ import {createService} from '../server/service.js';
 import path from 'node:path';
 import {writerLock,validateDatabase} from '../server/operations.js';
 const unlock=writerLock(process.env.DB_PATH||'data/clearcheckout.sqlite');
+process.once('exit',unlock);
 const initial=createService({dbPath:process.env.DB_PATH||'data/clearcheckout.sqlite',mediaOptions:{dataDir:path.join(path.dirname(process.env.DB_PATH||'data/clearcheckout.sqlite'),'media')}});initial.db.close();
 const secret=randomBytes(32).toString('hex');
 process.env.CC_TRANSPORT_SECRET=secret;
@@ -32,6 +33,6 @@ const server=createServer((req,res)=>{
 let stopping=false;
 for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{
  if(stopping)return;stopping=true;
- server.close(()=>{void app.close().finally(()=>{unlock();process.exit(0);});});
+ server.close(()=>{void app.close().finally(()=>process.exit(0));});
  setTimeout(()=>process.exit(1),25000).unref();
 });
