@@ -1,1 +1,0 @@
-chrome.action.onClicked.addListener(async tab=>{if(tab.id)try{await chrome.scripting.executeScript({target:{tabId:tab.id},files:['content.js']});}catch{await chrome.action.setBadgeText({tabId:tab.id,text:'!'});}});

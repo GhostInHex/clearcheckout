@@ -1,0 +1,68 @@
+import {chromium,expect} from '@playwright/test';
+import {resolve} from 'node:path';
+import {mkdtempSync,rmSync,cpSync,readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {z} from 'zod';
+import {nextFixture} from './next-fixture.js';
+const fixture=await nextFixture();
+const folder=mkdtempSync(`${tmpdir()}/cc-p10-`);
+const ext=`${folder}/extension`;cpSync(resolve('build/extension'),ext,{recursive:true});
+const manifest=z.object({host_permissions:z.array(z.string()).default([])}).passthrough().parse(JSON.parse(readFileSync(`${ext}/manifest.json`,'utf8')));
+manifest.host_permissions=[`${fixture.base}/*`];writeFileSync(`${ext}/manifest.json`,JSON.stringify(manifest));
+writeFileSync(`${ext}/content.js`,readFileSync(`${ext}/content.js`,'utf8').replaceAll('http://localhost:4319',fixture.base));
+const context=await chromium.launchPersistentContext(`${folder}/profile`,{channel:'chromium',headless:true,args:[`--disable-extensions-except=${ext}`,`--load-extension=${ext}`]});
+try{
+ const worker=context.serviceWorkers()[0]??await context.waitForEvent('serviceworker');
+ const page=await context.newPage();
+ const install=async()=>{await expect(page.locator('button[data-checkout-label]').first()).toBeVisible();const webUndo=page.locator('main').getByRole('button',{name:page.url().endsWith('/store-b')?'Clear local repairs':'Undo local repairs',exact:true});await webUndo.click();await worker.evaluate(async()=>{const tabs=await chrome.tabs.query({});const tab=tabs.find(value=>value.url?.startsWith('http://127.0.0.1:'));if(tab?.id===undefined)throw Error('Missing store');await chrome.scripting.executeScript({target:{tabId:tab.id},files:['content.js']});});};
+ const headers={'x-clearcheckout':'1',origin:fixture.base};
+ expect((await page.request.post(fixture.base+'/api/signup',{headers,data:{email:'memory@example.test',password:'synthetic-password'}})).status()).toBe(201);
+ await page.goto(fixture.base+'/demo');await page.getByRole('button',{name:'Save and enter my space'}).click();await page.getByRole('button',{name:'Open the demo store'}).click();
+ for(const installed of [false,true])for(const path of ['/demo','/demo/store-b']){
+  await page.goto(fixture.base+path);
+  if(installed)await install();
+  const surface=installed?page.locator('#clearcheckout-host'):page.locator('main');
+  const label=path==='/demo'?'Read cart summary':'Read demo summary';
+  const memory=surface.getByRole('region',{name:'Approved label memory'});
+  await expect(memory).toBeVisible();
+  await memory.getByRole('group',{name:label,exact:true}).getByRole('button',{name:'Remember reviewed label',exact:true}).click();
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('clearcheckout.approved-labels.v1')??'null').entries.length)).toBe(1);
+  await page.reload();if(installed)await install();
+  const control=page.locator(`button[data-checkout-label="${label}"]`);
+  await expect(control).toHaveAttribute('aria-label',label);
+  await control.evaluate(node=>node.setAttribute('aria-label','Merchant override'));
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('clearcheckout.approved-labels.v1')??'null').entries.length)).toBe(0);
+  await memory.getByRole('button',{name:'Forget approved label memory'}).click();
+  await expect(control).toHaveAttribute('aria-label','Merchant override');
+  await page.screenshot({path:`artifacts/program/P10/approved-memory/${installed?'installed':'web'}-${path==='/demo'?'a':'b'}.png`});
+  await page.evaluate(()=>localStorage.setItem('clearcheckout.approved-labels.v1','{"entries":"invalid"}'));
+  await page.reload();if(installed)await install();
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('clearcheckout.approved-labels.v1')??'null')?.entries.length)).toBe(0);
+  await control.evaluate(node=>{const duplicate=node.cloneNode(true);if(!(duplicate instanceof Element))throw Error('Missing duplicate');duplicate.setAttribute('data-memory-duplicate','true');node.after(duplicate);const sensitive=document.createElement('button');sensitive.setAttribute('data-checkout-label','Payment card');sensitive.id='memory-sensitive';node.after(sensitive);});
+  await memory.getByRole('button',{name:'Inspect approved label memory'}).click();
+  await expect(memory.getByRole('group',{name:'Payment card',exact:true})).toHaveCount(0);
+  await expect(memory.getByRole('group',{name:label,exact:true}).getByRole('button',{name:'Remember reviewed label',exact:true})).toHaveCount(0);
+  await page.locator('[data-memory-duplicate]').evaluate(node=>node.remove());await page.locator('#memory-sensitive').evaluate(node=>node.remove());
+  await memory.getByRole('button',{name:'Inspect approved label memory'}).click();
+  await memory.getByRole('group',{name:label,exact:true}).getByRole('button',{name:'Remember reviewed label',exact:true}).click();
+  await control.evaluate(node=>{const replacement=node.cloneNode(true);if(!(replacement instanceof Element))throw Error('Missing replacement');replacement.setAttribute('data-checkout-label','Changed merchant control');node.replaceWith(replacement);});
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('clearcheckout.approved-labels.v1')??'null').entries.length)).toBe(0);
+  await page.reload();if(installed)await install();
+  await memory.getByRole('group',{name:label,exact:true}).getByRole('button',{name:'Remember reviewed label',exact:true}).click();
+  await page.evaluate(()=>{const key='clearcheckout.approved-labels.v1';const saved=JSON.parse(localStorage.getItem(key)??'null');saved.entries[0].expires=0;localStorage.setItem(key,JSON.stringify(saved));});
+  await page.reload();if(installed)await install();
+  await expect(control).not.toHaveAttribute('aria-label',label);
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('clearcheckout.approved-labels.v1')??'null').entries.length)).toBe(0);
+  await memory.getByRole('group',{name:label,exact:true}).getByRole('button',{name:'Remember reviewed label',exact:true}).click();
+  await page.reload();if(installed)await install();
+  await expect(control).toHaveAttribute('aria-label',label);
+  await surface.getByRole('button',{name:installed?'Undo local repairs':path==='/demo'?'Undo local repairs':'Clear local repairs',exact:true}).click();
+  await expect(control).not.toHaveAttribute('aria-label',label);
+  await memory.getByRole('button',{name:'Inspect approved label memory'}).click();
+  await expect(control).not.toHaveAttribute('aria-label',label);
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('clearcheckout.approved-labels.v1')??'null').entries.length)).toBe(1);
+  await memory.getByRole('button',{name:'Forget approved label memory'}).click();
+
+ }
+ console.log('PASS production Next and copied installed MV3 both stores explicit memory approval, reload, merchant override, forget, malformed storage, replacement invalidation, expiry, undo without replay. No route fulfillment or real AT claim.');
+}finally{await context.close();await fixture.close();rmSync(folder,{recursive:true,force:true});}

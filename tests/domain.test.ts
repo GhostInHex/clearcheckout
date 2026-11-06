@@ -1,0 +1,23 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {transition,confirmationPhrase,quote} from '../shared/checkout.js';
+import type {Order} from '../shared/checkout.js';
+const order: Order={cart:{tea:1,mug:1},delivery:'standard',state:'draft',revision:1,reviewedRevision:null};
+test('exact confirmation and review required',()=>{assert.equal(quote(order.cart,order.delivery).total,4200);assert.throws(()=>transition(order,{type:'confirm',phrase:'CONFIRM $42.00',revision:1}));const reviewed=transition(order,{type:'review'});assert.throws(()=>transition(reviewed,{type:'confirm',phrase:'yes',revision:1}));assert.equal(transition(reviewed,{type:'confirm',phrase:confirmationPhrase(reviewed),revision:1}).state,'completed_demo');});
+test('changes invalidate confirmation, stale revisions fail',()=>{const reviewed=transition(order,{type:'review'});const changed=transition(reviewed,{type:'change',cart:{tea:2,mug:1},delivery:'express'});assert.equal(changed.state,'draft');assert.equal(changed.reviewedRevision,null);assert.throws(()=>transition(changed,{type:'confirm',phrase:'CONFIRM $74.00',revision:1}));assert.throws(()=>transition(transition(changed,{type:'review'}),{type:'confirm',phrase:'CONFIRM $74.00',revision:1}));});
+test('cancel and failure remain distinct from completion',()=>{assert.equal(transition(order,{type:'cancel'}).state,'cancelled');const reviewed=transition(order,{type:'review'});assert.equal(transition(reviewed,{type:'confirm',phrase:confirmationPhrase(order),revision:1,outcome:'fail'}).state,'failed');});
+
+test('HTTP checkout requests retain required confirmation outcome', async () => {
+  const {checkoutEventSchema} = await import('../shared/checkout-schema.js');
+  assert.equal(checkoutEventSchema.safeParse({type:'confirm', phrase:'CONFIRM $42.00', revision:1}).success, false);
+  assert.deepEqual(checkoutEventSchema.parse({type:'review', extra:true}), {type:'review'});
+  assert.equal(checkoutEventSchema.safeParse({type:'change', cart:{tea:0,mug:0}, delivery:'standard'}).success, false);
+});
+
+test('exact removal rejects stale, wrong and absent items and invalidates review',()=>{
+ const removal={type:'remove-item',itemId:'tea',name:'Everyday tea collection',revision:1} satisfies import('../shared/checkout-schema.js').CheckoutRequest;
+ const next=transition(transition(order,{type:'review'}),removal);
+ assert.equal(next.cart.tea,0);assert.equal(next.cart.mug,1);assert.equal(next.revision,2);assert.equal(next.reviewedRevision,null);
+ assert.throws(()=>transition(next,removal));
+ assert.throws(()=>transition(order,{...removal,name:'Stoneware morning mug'}));
+ assert.throws(()=>transition(next,{...removal,revision:2}));
+ assert.throws(()=>transition(next,{...removal,itemId:'mug',name:'Stoneware morning mug',revision:2}));
+});

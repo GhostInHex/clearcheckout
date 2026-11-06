@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.checkout.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "node",
+      "chrome"
+    ],
+    "allowImportingTsExtensions": true
+  },
+  "exclude": [
+    "scripts/next-start.ts"
+  ],
+  "include": [
+    "tests/*browser.ts",
+    "tests/browser.ts",
+    "scripts/**/*.ts",
+    "tests/axe-before-after.ts"
+  ]
+}

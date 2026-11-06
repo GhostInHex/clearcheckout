@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "tests/*.test.ts",
+    "server/**/*.ts",
+    "scripts/verify-compiled-server.ts",
+    "tests/node-helpers.ts",
+    "scripts/verify.ts",
+    "scripts/backup.ts",
+    "scripts/verify-backup.ts"
+  ]
+}

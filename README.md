@@ -14,7 +14,7 @@ npm start
 
 Open http://localhost:3000. No secrets, provider account, or card details are needed. SQLite initializes automatically in `data/clearcheckout.sqlite`. Preserve that directory across restarts. Set `DB_PATH` to change its location. Set `COOKIE_SECURE=true` behind HTTPS. Do not expose the local HTTP configuration publicly.
 
-For frontend development, run `npm run dev` and `npx vite` in separate terminals. Vite proxies API calls to port 3000.
+For development, run `npm run dev`. Both modes use `scripts/next-start.ts`, which signs the socket client identity before forwarding requests to Next. Raw `next start` is unsupported. The default listener is loopback. Set `HOSTNAME` and `PORT` explicitly for a host proxy.
 
 ## Try the complete journey
 
@@ -33,22 +33,32 @@ Build first. Unzip `build/clearcheckout-extension.zip`, open `chrome://extension
 
 The extension requests `activeTab`, `scripting`, and `storage`. It activates on user action and does not request access to every site. Scanning and repair run locally. Reliable `title` or explicit `data-checkout-label` context can supply missing names. Unknown controls remain unchanged. Repairs observe DOM rerenders while assistance is open. Closing assistance removes its own injected labels and preserves merchant-provided labels. Keyboard navigation supports explicitly marked cart, delivery, and review sections. It does not infer arbitrary merchant workflows or submit payments. Restricted browser pages do not allow injection.
 
-The embedded demo and extension bundle share `shared/dom.js` for scanning, repairs, observation, and commands. `shared/checkout.js` defines the exact-confirmation domain rules enforced by the API. Merchant payment execution is intentionally absent from the extension.
+The embedded demo and extension bundle share `shared/dom.ts` for scanning, repairs, observation, and commands. `shared/checkout.ts` defines the exact-confirmation domain rules enforced by the API. Merchant payment execution is intentionally absent from the extension.
 
 ## Verify
 
 ```sh
+npm ci
+npx playwright install --with-deps chromium
+npm run build:vercel
+npm run typecheck
+npm run lint
 npm test
-npx playwright install chromium
-npm run build
-npm start
-# In another terminal
-npm run test:browser
-npm run test:dom
-npm run test:extension
+npm run test:regression
+npx tsx scripts/verify-compiled-server.ts
 ```
 
-Browser verification writes screenshots and the actual axe violation report to `artifacts/`. Automated accessibility checks are not a screen reader audit.
+Build before tests that start Next. `build:vercel` is a packaging alias for the Next build and extension preparation. It does not deploy. Public extension files are prepared in `public/extension` and `public/clearcheckout-extension.zip`. The source ZIP URL redirects explicitly to the repository archive.
+
+`test:regression` runs six browser commands sequentially against actual Next processes with temporary databases, loopback ports, and minimal environments. Provider UI fixtures use a guarded test-only preload with deterministic outbound responses. They retain authentication, consent, validation, budget reservations and cooldowns. They never call a real provider. The production restart verifier retains its historical filename `scripts/verify-compiled-server.ts` and runs actual `npm start` twice against one isolated database. It checks session and order persistence and downloads. `COMPILED_TEST_PORT` overrides its default loopback port 3487. No fixture loads environment files.
+
+Hosting requires a persistent Node 22 process with persistent mounted SQLite and media directories. Vercel Functions ephemeral storage cannot provide durability for this design. Deployment is a separate milestone. The Next custom server is the only application runtime.
+
+`typecheck` checks every first-party TypeScript source through strict environment-specific configurations. All groups enable `strict`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes`. Frontend covers React and shared modules; extension covers MV3 and shared DOM; server covers compiled Node sources; Node tests cover unit fixtures and helpers; checkout covers packaging and configuration; browser tests cover every browser fixture and script, including live-provider scripts and the recorder. The inventory fails on missing coverage or first-party JavaScript and checks browser bundles for Node/server imports. There are no tool-required JavaScript exceptions. Python video assembly, JSON, CSS, HTML, media, and generated JavaScript remain in their native formats.
+
+`lint` runs ESLint with the TypeScript parser and rejects explicit `any`, type assertions, non-null assertions, and TypeScript suppression comments. The compiler is TypeScript 6.0, which satisfies the parser's supported peer range. CI provisions Chromium and runs the commands above. It never invokes live-provider scripts or the recorder; those are typechecked only.
+
+Browser verification writes screenshots and axe reports to `artifacts/`. Automated accessibility checks are not a screen reader audit. The extension fixture grants only its isolated origin and verifies injection, repairs, focus, and panel lifecycle. Manual toolbar `activeTab` activation remains unverified.
 
 ## Security and limits
 
@@ -60,7 +70,7 @@ This is a local submission, not a production security or universal accessibility
 
 ## Optional official Meta AI order explanations
 
-The demo clarity panel includes **Explain with Meta AI**, using the official Meta Model API and `muse-spark-1.3-contributor`. Copy `.env.example` to `.env` and privately set `MODEL_API_KEY`, or set `MODEL_API_KEY_FILE` to a private UTF-8 file. `server/index.js` loads the working directory's gitignored `.env` at startup with Node's `process.loadEnvFile`; existing environment variables take precedence. Restart after changing configuration. The key stays on the server. Never use a `VITE_` key variable.
+The demo clarity panel includes **Explain with Meta AI**, using the official Meta Model API and `muse-spark-1.3-contributor`. Copy `.env.example` to `.env` and privately set `MODEL_API_KEY`, or set `MODEL_API_KEY_FILE` to a private UTF-8 file. Next loads local environment files during startup; existing environment variables take precedence. Restart after changing configuration. The key stays on the server. Never use a `VITE_` key variable.
 
 Before asking Meta, shoppers approve sharing the demo items, authoritative prices, delivery, checkout state, revision, and guidance detail. Contributor prompts and responses may be used by Meta for training. No account email, password, session token, arbitrary customer prompt, field values, or screenshots are forwarded. Local control repairs continue to run without AI. AI text is advisory, rendered as React text, and cannot execute tools, modify orders, or confirm payment. The trusted app total remains separately visible.
 
