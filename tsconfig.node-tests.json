@@ -10,6 +10,8 @@
     "tests/node-helpers.ts",
     "scripts/verify.ts",
     "scripts/backup.ts",
-    "scripts/verify-backup.ts"
+    "scripts/verify-backup.ts",
+    "scripts/verify-frontend-proxy.ts",
+    "scripts/verify-hosted.ts"
   ]
 }

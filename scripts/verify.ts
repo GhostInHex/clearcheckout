@@ -34,7 +34,7 @@ try{
   const child=spawn('npm',command==='test'?['test']:['run',command],{env,stdio:['ignore','pipe','pipe']});
   children.add(child);child.stdout?.pipe(log);child.stderr?.pipe(log,{end:false});child.once('close',()=>{children.delete(child);log.end();});await wait(child,command);
  }
- for(const [script,name] of [['scripts/verify-next-shutdown.ts','shutdown'],['scripts/verify-regression.ts','regression'],['scripts/verify-next-security.ts','security'],['scripts/verify-compiled-server.ts','restart-downloads']]){
+ for(const [script,name] of [['scripts/verify-next-shutdown.ts','shutdown'],['scripts/verify-regression.ts','regression'],['scripts/verify-next-security.ts','security'],['scripts/verify-compiled-server.ts','restart-downloads'],['scripts/verify-frontend-proxy.ts','frontend-proxy']]){
   if(!script || !name)throw Error('Missing verification command');
   await wait(start(['node_modules/tsx/dist/cli.mjs',script],name),name);
  }

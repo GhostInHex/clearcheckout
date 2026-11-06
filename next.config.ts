@@ -1,5 +1,8 @@
 import type {NextConfig} from 'next';
-const config:NextConfig={serverExternalPackages:['better-sqlite3'],poweredByHeader:false,
+import {frontendDeployment} from './server/frontend-deployment';
+const deployment=frontendDeployment(process.env);
+const config:NextConfig={distDir:deployment.kind==='frontend'?'.next-vercel':'.next',
+async rewrites(){return {beforeFiles:deployment.kind==='frontend'?[{source:'/api/:path*',destination:deployment.backend+'/api/:path*'}]:[],afterFiles:[],fallback:[]};},serverExternalPackages:['better-sqlite3'],poweredByHeader:false,
 async redirects(){return [{source:'/clearcheckout-source.zip',destination:'https://github.com/GhostInHex/clearcheckout/archive/refs/heads/main.zip',permanent:false}];},
 async headers(){return [{source:'/:path*',headers:[
 {key:'Content-Security-Policy',value:"default-src 'self'; base-uri 'self'; font-src 'self' https: data:; form-action 'self'; frame-ancestors 'self'; img-src 'self' data:; object-src 'none'; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' https: 'unsafe-inline'"},
