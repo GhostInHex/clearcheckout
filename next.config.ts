@@ -1,7 +1,7 @@
 import type {NextConfig} from 'next';
 import {frontendDeployment} from './server/frontend-deployment';
 const deployment=frontendDeployment(process.env);
-const config:NextConfig={distDir:deployment.kind==='frontend'?'.next-vercel':'.next',
+const config:NextConfig={typescript:{tsconfigPath:deployment.kind==='frontend'?'tsconfig.vercel.json':'tsconfig.json'},distDir:deployment.kind==='frontend'?'.next-vercel':'.next',
 async rewrites(){return {beforeFiles:deployment.kind==='frontend'?[{source:'/api/:path*',destination:deployment.backend+'/api/:path*'}]:[],afterFiles:[],fallback:[]};},serverExternalPackages:['better-sqlite3'],poweredByHeader:false,
 async redirects(){return [{source:'/clearcheckout-source.zip',destination:'https://github.com/GhostInHex/clearcheckout/archive/refs/heads/main.zip',permanent:false}];},
 async headers(){return [{source:'/:path*',headers:[

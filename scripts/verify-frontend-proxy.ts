@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {spawn,type ChildProcess,execFileSync} from 'node:child_process';
-import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
+import {mkdtempSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {createServer as createHttpsServer} from 'node:https';
 import {request as httpRequest,createServer} from 'node:http';
@@ -8,12 +8,13 @@ import {once} from 'node:events';
 import {z} from 'zod';
 
 const dir=mkdtempSync(tmpdir()+'/cc-proxy-');
+const nextTypes=readFileSync('next-env.d.ts');
 const children=new Set<ChildProcess>();
 const env={PATH:process.env.PATH,HOME:dir,NODE_ENV:'production',NEXT_TELEMETRY_DISABLED:'1',CLEARCHECKOUT_SKIP_ENV_FILE:'1'};
 async function port(){const server=createServer();server.listen(0,'127.0.0.1');await once(server,'listening');const address=server.address();assert(address&&typeof address!=='string');await new Promise<void>(resolve=>server.close(()=>resolve()));return address.port;}
 const backendPort=await port(),frontendPort=await port();
 const base=`http://127.0.0.1:${frontendPort}`;
-function launch(args:string[],extra:NodeJS.ProcessEnv={}){const child=spawn(process.execPath,args,{env:{...env,...extra},stdio:['ignore','pipe','pipe'],detached:true});children.add(child);child.stderr?.on('data',chunk=>process.stderr.write(chunk));return child;}
+function launch(args:string[],extra:NodeJS.ProcessEnv={}){const child=spawn(process.execPath,args,{env:{...env,...extra},stdio:['ignore','pipe','pipe'],detached:true});children.add(child);child.stderr?.on('data',chunk=>process.stderr.write(chunk));child.stdout?.on('data',chunk=>process.stdout.write(chunk));return child;}
 async function stop(child:ChildProcess){if(child.exitCode!==null||child.signalCode!==null)return;assert(child.pid);const closed=once(child,'close');process.kill(-child.pid,'SIGTERM');const timer=setTimeout(()=>{if(child.exitCode===null&&child.signalCode===null&&child.pid)process.kill(-child.pid,'SIGKILL');},10000);await closed;clearTimeout(timer);}
 async function ready(url:string,child:ChildProcess){for(let n=0;n<300;n++){assert.equal(child.exitCode,null,'Server exited before readiness');try{if((await fetch(url,{signal:AbortSignal.timeout(1000)})).ok)return;}catch{}await new Promise(resolve=>setTimeout(resolve,100));}throw Error('Server readiness timed out');}
 let backend:ChildProcess|undefined;
@@ -43,4 +44,4 @@ try{
  assert.equal((await request('/api/logout',{})).status,200);assert.equal((await request('/api/me')).status,401);
  assert.equal((await request('/api/login',{email:'proxy@example.invalid',password:'proxy-test-password'})).status,200);
  console.log('Built Next frontend proxy: signup, session, preferences, order, restart persistence, origin rejection and overwritten forged identity passed.');
-}finally{await Promise.all([...children].map(stop));if(tls)await new Promise<void>(resolve=>tls?.close(()=>resolve()));rmSync(dir,{recursive:true,force:true});}
+}finally{await Promise.all([...children].map(stop));if(tls)await new Promise<void>(resolve=>tls?.close(()=>resolve()));writeFileSync('next-env.d.ts',nextTypes);rmSync(dir,{recursive:true,force:true});}

@@ -11,7 +11,7 @@ export function frontendDeployment(environment:NodeJS.ProcessEnv):Deployment{
  const parsed=deploymentSchema.safeParse(environment);
  if(!parsed.success)throw Error('Vercel frontend requires valid CC_BACKEND_ORIGIN and CC_FRONTEND_ORIGIN HTTPS origins');
  const {CC_BACKEND_ORIGIN:backend,CC_FRONTEND_ORIGIN:frontend}=parsed.data;
- const frontendHosts=[new URL(frontend).hostname,environment.VERCEL_URL,environment.VERCEL_PROJECT_PRODUCTION_URL].filter(Boolean);
+ const frontendHosts=[new URL(frontend).hostname,environment.VERCEL_URL,environment.VERCEL_BRANCH_URL,environment.VERCEL_PROJECT_PRODUCTION_URL].filter(Boolean);
  if(frontendHosts.includes(new URL(backend).hostname))throw Error('CC_BACKEND_ORIGIN must be a separate persistent backend, not this frontend');
  return {kind:'frontend',backend,frontend};
 }
