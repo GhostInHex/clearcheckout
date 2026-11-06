@@ -1,103 +1,136 @@
-const selector = 'button, input:not([type=hidden]), select, textarea, a[href], [role=button]';
+const selector = 'button, input:not([type=hidden]), select, textarea, a[href], [role=button], [role=slider], [role=checkbox]';
+type Provenance = 'merchant' | 'accessible-name' | 'unknown';
+export interface Control {
+  id: string;
+  element: Element;
+  fingerprint: string;
+  provenance: Provenance;
+  label: string | null;
+  sensitivity: 'sensitive' | 'unknown';
+  capabilities: readonly ('focus' | 'native-keyboard' | 'custom-keyboard-unknown')[];
+}
+const identities = new WeakMap<Element, string>();
 const ownedLabels = new WeakMap<Element, string>();
-
-function nameOf(element: Element) {
-  const labelled = element.getAttribute('aria-labelledby');
-  if (labelled?.split(/\s+/).some(id => element.ownerDocument.getElementById(id)?.textContent?.trim())) return true;
-  if (element.getAttribute('aria-label')?.trim()) return true;
-  if ([...((element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement || element instanceof HTMLButtonElement) ? element.labels || [] : [])].some(label => label.textContent?.trim())) return true;
-  if (element instanceof HTMLInputElement) {
-    if (element.type === 'image') return Boolean(element.alt?.trim());
-    return ['button', 'submit', 'reset'].includes(element.type) && Boolean(element.value.trim());
+let sequence = 0;
+function isInput(element: Element): element is HTMLInputElement {
+  const view = element.ownerDocument.defaultView;
+  return Boolean(view && element instanceof view.HTMLInputElement);
+}
+function isForm(element: Element): element is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement {
+  const view = element.ownerDocument.defaultView;
+  return Boolean(view && (element instanceof view.HTMLInputElement || element instanceof view.HTMLSelectElement || element instanceof view.HTMLTextAreaElement || element instanceof view.HTMLButtonElement));
+}
+function isHtml(element: Element): element is HTMLElement {
+  const view = element.ownerDocument.defaultView;
+  return Boolean(view && element instanceof view.HTMLElement);
+}
+function text(element: Element, includeHidden = false): string {
+  const view = element.ownerDocument.defaultView;
+  return [...element.childNodes].map(node => node.nodeType === 3 ? node.textContent ?? '' : view && node instanceof view.Element && !node.matches('script,style') && (includeHidden || (!node.matches('[hidden],[aria-hidden=true]') && view.getComputedStyle(node).display !== 'none' && view.getComputedStyle(node).visibility !== 'hidden')) ? text(node, includeHidden) : '').join(' ').trim();
+}
+function nameOf(element: Element): string {
+  const root = element.getRootNode();
+  const ids = element.getAttribute('aria-labelledby')?.trim().split(/\s+/) ?? [];
+  const references = ids.map(id => 'getElementById' in root && typeof root.getElementById === 'function' ? root.getElementById(id) : null).filter((node): node is Element => node !== null);
+  if (references.length) return references.map(node => text(node, true)).join(' ').trim();
+  const aria = element.getAttribute('aria-label')?.trim();
+  if (aria) return aria;
+  if (isForm(element)) {
+    const labels = [...element.labels ?? []].map(label => text(label)).join(' ').trim();
+    if (labels) return labels;
   }
-  if (['SELECT', 'TEXTAREA'].includes(element.tagName)) return false;
-  return Boolean(element.textContent?.trim() || element.querySelector('img[alt]:not([alt=""])'));
+  if (isInput(element)) {
+    if (element.type === 'image') return element.alt.trim();
+    if (['button','submit','reset'].includes(element.type)) return element.value.trim() || (element.type === 'submit' ? 'Submit' : element.type === 'reset' ? 'Reset' : '');
+    return '';
+  }
+  if (element.matches('select,textarea')) return '';
+  return text(element) || element.querySelector('img[alt]')?.getAttribute('alt')?.trim() || '';
 }
-
-function controls(root: ParentNode) {
-  return [...root.querySelectorAll(selector)].filter(element => !element.closest('[data-clearcheckout-panel]'));
+function controls(root: ParentNode, visible = true): Element[] {
+  const result: Element[] = [];
+  for (const element of root.querySelectorAll('*')) {
+    if (element.closest('[data-clearcheckout-panel]')) continue;
+    if (element.matches(selector) && (!visible || (!element.closest('[hidden],[inert],[aria-hidden=true]') && element.getClientRects().length && element.ownerDocument.defaultView?.getComputedStyle(element).visibility !== 'hidden'))) result.push(element);
+    if (element.shadowRoot) result.push(...controls(element.shadowRoot, visible));
+  }
+  return result;
 }
-
 function reliableLabel(element: Element) {
-  return (element.getAttribute('data-checkout-label') || element.getAttribute('title'))?.trim().slice(0, 120) || null;
+  return element.getAttribute('data-checkout-label')?.trim().slice(0,120) || null;
 }
-
-export function scan(root: ParentNode) {
-  return controls(root).filter(element => !nameOf(element)).map((element, index) => {
-    const label = reliableLabel(element);
-    return {element, label, description: label ? `Missing name: ${label}` : `Unknown ${element.tagName.toLowerCase()} control ${index + 1}. Needs a human label.`};
+export function registry(root: ParentNode): Control[] {
+  return controls(root).map(element => {
+    let id = identities.get(element);
+    if (!id) { id = `local-control-${++sequence}`; identities.set(element,id); }
+    const name = nameOf(element);
+    const label = name || reliableLabel(element);
+    return {id,element,fingerprint: JSON.stringify([element.localName,element.getAttribute('role'),element.getAttribute('type'),element.getAttribute('data-checkout-label'),name]),label,
+      provenance: name ? 'accessible-name' : label ? 'merchant' : 'unknown',
+      sensitivity: isInput(element) && (element.type === 'password' || /cc-|email|tel/.test(element.autocomplete)) ? 'sensitive' : 'unknown',
+      capabilities: element.matches('button,input,select,textarea,a[href]') ? ['focus','native-keyboard'] : ['focus','custom-keyboard-unknown']};
   });
 }
-
+export function scan(root: ParentNode) {
+  return registry(root).filter(control => !nameOf(control.element)).map(control => ({...control, description: control.label ? `Missing name: ${control.label}` : `Unknown ${control.element.localName} control. Needs a human label.`}));
+}
 export function repair(root: ParentNode) {
   let repaired = 0;
   for (const element of controls(root)) {
     const owned = ownedLabels.get(element);
     if (owned) {
       if (element.getAttribute('aria-label') !== owned) {
-        ownedLabels.delete(element);
-        element.removeAttribute('data-clearcheckout-repaired');
+        ownedLabels.delete(element); element.removeAttribute('data-clearcheckout-repaired');
       } else {
         element.removeAttribute('aria-label');
-        const naturalName = nameOf(element);
         const next = reliableLabel(element);
-        if (!naturalName && next) {
-          element.setAttribute('aria-label', next);
-          ownedLabels.set(element, next);
+        if (!nameOf(element) && next) {
+          element.setAttribute('aria-label',next); ownedLabels.set(element,next);
           if (next !== owned) repaired++;
           continue;
         }
-        ownedLabels.delete(element);
-        element.removeAttribute('data-clearcheckout-repaired');
+        ownedLabels.delete(element); element.removeAttribute('data-clearcheckout-repaired');
       }
     }
     if (!nameOf(element)) {
       const label = reliableLabel(element);
-      if (label) {
-        element.setAttribute('aria-label', label);
-        element.setAttribute('data-clearcheckout-repaired', 'true');
-        ownedLabels.set(element, label);
-        repaired++;
-      }
+      if (label) { element.setAttribute('aria-label',label); element.setAttribute('data-clearcheckout-repaired','true'); ownedLabels.set(element,label); repaired++; }
     }
   }
-  return {repaired, unknown: scan(root).filter(item => !item.label).length};
+  return {repaired,unknown:scan(root).filter(item => !item.label).length};
 }
-
 export function observeRepairs(root: Node & ParentNode, onRepair: (result: ReturnType<typeof repair>) => void = () => {}) {
-  const options = {childList: true, characterData: true, subtree: true, attributes: true,
-    attributeFilter: ['aria-label', 'aria-labelledby', 'title', 'data-checkout-label', 'type', 'alt', 'for', 'id', 'value']};
+  const options = {childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:['aria-label','aria-labelledby','data-checkout-label','type','alt','for','id','value','hidden','style','class','aria-hidden']};
   const observer = new MutationObserver(() => {
     observer.disconnect();
-    try {
-      const result = repair(root);
-      if (result.repaired) onRepair(result);
-    } finally {
-      observer.observe(root, options);
-    }
+    try { const result=repair(root); if(result.repaired) onRepair(result); }
+    finally { connect(); }
   });
-  observer.observe(root, options);
+  function connect() {
+    observer.observe(root,options);
+    for(const element of root.querySelectorAll('*')) if(element.shadowRoot && !element.closest('[data-clearcheckout-panel]')) observeShadow(element.shadowRoot);
+  }
+  function observeShadow(shadow: ShadowRoot) {
+    observer.observe(shadow,options);
+    for(const element of shadow.querySelectorAll('*')) if(element.shadowRoot) observeShadow(element.shadowRoot);
+  }
+  connect();
   return () => observer.disconnect();
 }
-
 export function clearRepairs(root: ParentNode) {
-  for (const element of controls(root)) {
-    const owned = ownedLabels.get(element);
-    if (!owned) continue;
-    if (element.getAttribute('aria-label') === owned) element.removeAttribute('aria-label');
-    element.removeAttribute('data-clearcheckout-repaired');
-    ownedLabels.delete(element);
+  for(const element of controls(root, false)) {
+    const owned=ownedLabels.get(element); if(!owned) continue;
+    if(element.getAttribute('aria-label')===owned) element.removeAttribute('aria-label');
+    element.removeAttribute('data-clearcheckout-repaired'); ownedLabels.delete(element);
   }
 }
-
 export function runCommand(root: ParentNode | null, command: string) {
-  const targets: Record<string, string> = {cart: '[data-checkout-cart]', delivery: '[data-checkout-delivery]', review: '[data-checkout-review]'};
-  const target = root?.querySelector(targets[command] || '[data-command-never]');
-  if (!(target instanceof HTMLElement)) return 'That section is not available on this page. No action was taken.';
-  target.focus();
-  return `Moved to ${command}. Review the details before taking an action.`;
+  const targets: Record<string,string>={cart:'[data-checkout-cart]',delivery:'[data-checkout-delivery]',review:'[data-checkout-review]'};
+  const target=root?.querySelector(targets[command] || '[data-command-never]');
+  if(!target || !isHtml(target)) return 'That section is not available on this page. No action was taken.';
+  target.focus(); return `Moved to ${command}. Review the details before taking an action.`;
 }
 export function keyboardCommand(event: KeyboardEvent) {
-  if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) return null;
-  const keys: Record<string, string> = {c: 'cart', d: 'delivery', r: 'review'}; return keys[event.key.toLowerCase()] || null;
+  if(!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) return null;
+  const keys: Record<string,string>={c:'cart',d:'delivery',r:'review'}; return keys[event.key.toLowerCase()] || null;
 }

@@ -8,6 +8,8 @@
     "build": "tsx scripts/build-extension.ts && tsx scripts/prepare-next-assets.ts && next build --webpack",
     "start": "tsx scripts/next-start.ts",
     "test": "tsx --test tests/*.test.ts",
+    "test:controls": "tsx tests/axe-before-after.ts",
+    "test:paypal-mocked": "tsx tests/paypal-browser.ts",
     "test:browser": "tsx tests/browser.ts",
     "test:dom": "tsx tests/dom-browser.ts",
     "test:extension": "tsx tests/extension-browser.ts",
