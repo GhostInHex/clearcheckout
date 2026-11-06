@@ -42,6 +42,7 @@
     "scripts/next-start.ts",
     "tests/next-provider-fixture.ts",
     "scripts/verify-next-security.ts",
+    "scripts/verify-next-shutdown.ts",
     "tests/next-browser-provider.ts",
     "tests/next-fixture.ts",
     ".next/dev/types/**/*.ts"
