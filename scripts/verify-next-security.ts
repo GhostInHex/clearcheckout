@@ -20,7 +20,11 @@ async function start(fake=true,trustProxy='loopback'){
  for(let n=0;n<200;n++){if(server.exitCode!==null)throw Error('Next exited');try{await fetch(base);return;}catch{await new Promise(resolve=>setTimeout(resolve,100));}}
  throw Error('Next not ready');
 }
-async function stop(){if(server){server.kill('SIGTERM');await once(server,'exit');server=undefined;}}
+async function stop(){
+ const child=server;server=undefined;
+ if(!child || child.exitCode!==null || child.signalCode!==null)return;
+ const exited=once(child,'exit');child.kill('SIGTERM');await exited;
+}
 let client=1;
 async function call(route:string,{method='GET',body,cookie='',headers={}}:{method?:string;body?:string|Uint8Array;cookie?:string;headers?:Record<string,string>}={}){
  const response=await fetch(base+route,{method,headers:{'X-ClearCheckout':'1','Content-Type':'application/json','X-Forwarded-For':`192.0.2.${client}`,Cookie:cookie,...headers},...(body===undefined?{}:{body:typeof body==='string'?body:new Blob([new Uint8Array(body)])})});
