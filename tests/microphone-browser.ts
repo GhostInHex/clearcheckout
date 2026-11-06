@@ -22,7 +22,7 @@ try {
     await client.request('/signup', {email: `mic-${Date.now()}@example.test`, password: 'local-microphone-test123'});
     await client.request('/preferences', {preferences: {textSize: 'standard', contrast: false, guidance: 'brief'}});
   });
-  await page.reload();
+  await page.goto(new URL('/dashboard',page.url()).href);
   await page.getByRole('button', {name: 'Open the demo store'}).click();
   await page.getByRole('button', {name: 'Record a command', exact: true}).click();
   await page.getByRole('button', {name: 'Stop recording', exact: true}).waitFor();

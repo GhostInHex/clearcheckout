@@ -1,4 +1,7 @@
 import 'server-only';
+import {env as runtimeEnvironment} from 'node:process';
+import type {MailAdapter} from './auth.js';
+declare global {var clearcheckoutTestMail:MailAdapter|undefined;}
 import {createService,ServiceError} from './service.js';
 import {preferencesSchema,statusErrorSchema,json} from './contracts.js';
 import {checkoutEventSchema} from '../shared/checkout-schema.js';
@@ -31,16 +34,25 @@ export async function handle(request:Request){
  let verified=true;
  if(origin)try{const parsed=new URL(origin);verified=parsed.origin===origin&&(allowed.length?allowed.includes(origin):parsed.host===request.headers.get('host'));}catch{verified=false;}
  if(!['GET','HEAD'].includes(method)&&(request.headers.get('x-clearcheckout')!=='1'||!verified))return reply({error:'Request origin could not be verified.'},403);
- service??=createService({dbPath:process.env.DB_PATH||'data/clearcheckout.sqlite',mediaOptions:{dataDir:nodePath.join(nodePath.dirname(process.env.DB_PATH||'data/clearcheckout.sqlite'),'media')}});
+ service??=createService({mail:runtimeEnvironment.NODE_ENV==='test'?globalThis.clearcheckoutTestMail:undefined,appOrigin:process.env.PUBLIC_ORIGIN,dbPath:process.env.DB_PATH||'data/clearcheckout.sqlite',mediaOptions:{dataDir:nodePath.join(nodePath.dirname(process.env.DB_PATH||'data/clearcheckout.sqlite'),'media')}});
  const token=request.headers.get('cookie')?.split(';').map(v=>v.trim()).find(v=>v.startsWith('cc_session='))?.slice(11);
  const user=service.authenticate(token);
  if(method==='POST'&&(path==='/api/signup'||path==='/api/login')){
  if(limit('auth:'+ip,30,900000,headers))return new Response('Too many requests, please try again later.',{status:429,headers:new Headers([...headers,['Content-Type','text/html; charset=utf-8']])});
- const result=path==='/api/signup'?service.signup(body):service.login(body);
+ const result=path==='/api/signup'?await service.signup(body):await service.login(body);
  headers.append('Set-Cookie',`cc_session=${service.issueSession(result.id)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800${process.env.COOKIE_SECURE==='true'?'; Secure':''}`);return reply(result,path==='/api/signup'?201:200);
  }
  if(path==='/api/logout'&&method==='POST'){service.logout(token);headers.append('Set-Cookie',`cc_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${process.env.COOKIE_SECURE==='true'?'; Secure':''}`);return reply({ok:true});}
+ if(path==='/api/account/mail'&&method==='GET')return reply({available:service.auth.available});
+ if(path==='/api/account/reset-request'&&method==='POST')return reply(await service.auth.request('reset',body));
+ if(path==='/api/account/reset'&&method==='POST')return reply(await service.auth.reset(body));
+ if(path==='/api/account/verify'&&method==='POST')return reply(service.auth.verify(body));
  if(!user)return reply({error:'Sign in to continue.'},401);
+ if(path==='/api/account/verification-request'&&method==='POST')return reply(await service.auth.request('verify',body,user));
+ if(path==='/api/account/password'&&method==='POST')return reply(await service.auth.changePassword(user,body));
+ if(path==='/api/account/sessions'&&method==='POST')return reply(service.auth.revoke(user,token,body));
+ if(path==='/api/account/export'&&method==='GET')return reply(service.auth.exportAccount(user));
+ if(path==='/api/account/delete'&&method==='POST')return reply(await service.auth.deleteAccount(user,body));
  if(path==='/api/me'&&method==='GET')return reply(service.publicUser(user));
  if(path==='/api/preferences'&&method==='PUT')return reply(service.setPreferences(user,body));
  if(path==='/api/orders'&&method==='GET')return reply(service.orders(user));

@@ -18,6 +18,13 @@ export const migrations: readonly Migration[] = [
     CREATE UNIQUE INDEX payment_provider_identity ON payment_attempts(json_extract(body,'$.state.providerId')) WHERE json_extract(body,'$.state.providerId') IS NOT NULL;
     INSERT INTO schema_migrations VALUES(3,'payment-attempts',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
   `},
+  {version:4,name:'account-controls',sql:`
+    ALTER TABLE users ADD COLUMN auth_generation INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0;
+    CREATE TABLE account_tokens(hash TEXT PRIMARY KEY,user_id TEXT NOT NULL,purpose TEXT NOT NULL CHECK(purpose IN ('reset','verify')),expires INTEGER NOT NULL,created INTEGER NOT NULL,UNIQUE(user_id,purpose));
+    CREATE TABLE account_mail_limits(key TEXT PRIMARY KEY,next_at INTEGER NOT NULL);
+    INSERT INTO schema_migrations VALUES(4,'account-controls',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+  `},
 ];
 
 export function migrate(db:Database.Database,steps:readonly Migration[]=migrations):void {

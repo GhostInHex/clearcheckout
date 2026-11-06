@@ -10,8 +10,8 @@ try {
   const fixture=await nextFixture(configured);const context=await browser.newContext();const page=await context.newPage();const base=fixture.base;
   try {
    await page.goto(base);
-   await page.evaluate(async()=>{const client={request(path: string,body: unknown){return fetch('/api'+path,{method:path==='/preferences'?'PUT':'POST',headers:{'content-type':'application/json','x-clearcheckout':'1'},body:JSON.stringify(body)});}};await client.request('/signup',{email:'browser@test.com',password:'correctpassword'});await client.request('/preferences',{preferences:{textSize:'standard',contrast:false,guidance:'brief'}});});
-   await page.reload();await page.getByRole('button',{name:'Open the demo store'}).click();
+   const setup=await page.evaluate(async()=>{const client={request(path: string,body: unknown){return fetch('/api'+path,{method:path==='/preferences'?'PUT':'POST',headers:{'content-type':'application/json','x-clearcheckout':'1'},body:JSON.stringify(body)});}};const signup=await client.request('/signup',{email:'browser@test.com',password:'correctpassword'});const preferences=await client.request('/preferences',{preferences:{textSize:'standard',contrast:false,guidance:'brief'}});return {signup:signup.status,preferences:preferences.status};});assert.deepEqual(setup,{signup:201,preferences:200});
+   await page.goto(base+'/dashboard');await page.getByRole('button',{name:'Open the demo store'}).click();
    if(!configured) {await page.getByText('Meta AI is not configured. Local checkout guidance is still available.').waitFor();}
    else {
     const button=page.getByRole('button',{name:'Explain with Meta AI'});await button.waitFor();assert.equal(await button.isDisabled(),true);

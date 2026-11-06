@@ -5,7 +5,7 @@ const wav=Buffer.alloc(46);wav.write('RIFF');wav.writeUInt32LE(38,4);wav.write('
 const fixture=await nextFixture(true),browser=await chromium.launch({headless:true});
 try {
  const page=await browser.newPage();await page.goto(fixture.base);
- await page.evaluate(async()=>{const client={post(p: string,b: unknown){return fetch('/api'+p,{method:p==='/preferences'?'PUT':'POST',headers:{'Content-Type':'application/json','X-ClearCheckout':'1'},body:JSON.stringify(b)});}};await client.post('/signup',{email:'media@test.com',password:'correctpassword123'});await client.post('/preferences',{preferences:{textSize:'standard',contrast:false,guidance:'brief'}});});await page.reload();await page.getByRole('button',{name:'Open the demo store'}).click();
+ await page.evaluate(async()=>{const client={post(p: string,b: unknown){return fetch('/api'+p,{method:p==='/preferences'?'PUT':'POST',headers:{'Content-Type':'application/json','X-ClearCheckout':'1'},body:JSON.stringify(b)});}};await client.post('/signup',{email:'media@test.com',password:'correctpassword123'});await client.post('/preferences',{preferences:{textSize:'standard',contrast:false,guidance:'brief'}});});await page.goto(fixture.base+'/dashboard');await page.getByRole('button',{name:'Open the demo store'}).click();
 
  await page.locator('input[type=file]').setInputFiles({name:'command.wav',mimeType:'audio/wav',buffer:wav});
  await page.getByRole('button',{name:'Send audio to Meta',exact:true}).click();await page.getByRole('button',{name:'Apply go to review'}).click();assert.equal(await page.evaluate(()=>document.activeElement?.textContent),'Review and confirm');await expect(page.getByText('Status: draft',{exact:true})).toBeVisible();
