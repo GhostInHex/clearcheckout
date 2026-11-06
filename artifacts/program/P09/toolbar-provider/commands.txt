@@ -1,0 +1,7 @@
+npm run build
+node artifacts/program/P09/toolbar-provider/toolbar-probe.mjs
+DISPLAY=:1 scrot -o artifacts/program/P09/toolbar-provider/current.png
+DISPLAY=:1 xdotool mousemove 598 118 click 1
+DISPLAY=:1 scrot -o artifacts/program/P09/toolbar-provider/menu-current.png
+DISPLAY=:1 xdotool mousemove 410 279 click 1
+DISPLAY=:1 xdotool key Escape

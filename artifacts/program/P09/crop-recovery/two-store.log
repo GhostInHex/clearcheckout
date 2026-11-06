@@ -1,0 +1,6 @@
+
+> clearcheckout@1.0.0 test:controls
+> tsx tests/axe-before-after.ts
+
+✓ Running next.config.ts took 44ms
+artifacts/program/P08/eb160d575ba95e6e90a262f0ddd956ad13a393f3-1793868745053

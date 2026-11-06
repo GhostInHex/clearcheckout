@@ -1,0 +1,29 @@
+{
+  "base": "eb160d575ba95e6e90a262f0ddd956ad13a393f3",
+  "status": "P09 incomplete; installed crop refusal probe only",
+  "passed": [
+    "npm run verify on working runtime source",
+    "installed crop refusal and input/overlap rejection probe",
+    "installed linking",
+    "two-store controls",
+    "mocked payments",
+    "final extension and browser TypeScript checks"
+  ],
+  "capture": "could not run successful capture without toolbar activeTab gesture",
+  "error": "Either the '<all_urls>' or 'activeTab' permission is required.",
+  "remaining": [
+    "successful toolbar capture and exact PNG bytes",
+    "explicit consent upload",
+    "server validator and scoped provider",
+    "shared durable reservation/cache",
+    "reviewed suggestion lifecycle",
+    "adversarial and held-out privacy matrix",
+    "independent root reviews"
+  ],
+  "liveCalls": 0,
+  "children": 0,
+  "limitations": [
+    "Full verify started before final additions to focused probe test; final test and focused typechecks passed afterward.",
+    "No general capture infeasibility or model quality conclusion."
+  ]
+}

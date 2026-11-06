@@ -30,6 +30,11 @@ export const migrations: readonly Migration[] = [
     CREATE TABLE paypal_webhooks(id TEXT PRIMARY KEY);
     INSERT INTO schema_migrations VALUES(5,'paypal-sandbox-bookkeeping',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
   `},
+  {version:6,name:'extension-devices',sql:`
+    CREATE TABLE extension_links(hash TEXT PRIMARY KEY,user_id TEXT NOT NULL,extension_id TEXT NOT NULL,installation_id TEXT NOT NULL,nonce TEXT NOT NULL,expires INTEGER NOT NULL);
+    CREATE TABLE extension_devices(id TEXT PRIMARY KEY,hash TEXT NOT NULL UNIQUE,user_id TEXT NOT NULL,extension_id TEXT NOT NULL,installation_id TEXT NOT NULL,expires INTEGER NOT NULL,revoked INTEGER NOT NULL DEFAULT 0,scope TEXT NOT NULL CHECK(scope='labels:suggest'));
+    INSERT INTO schema_migrations VALUES(6,'extension-devices',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+  `},
 ];
 
 export function migrate(db:Database.Database,steps:readonly Migration[]=migrations):void {

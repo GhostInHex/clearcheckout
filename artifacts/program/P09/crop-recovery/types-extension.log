@@ -1,0 +1,4 @@
+
+> clearcheckout@1.0.0 typecheck:extension
+> tsc -p tsconfig.extension.json
+

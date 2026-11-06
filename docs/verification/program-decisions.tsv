@@ -1,2 +1,3 @@
 ts	phase	decision	why	evidence	result
 2026-11-05T00:00:00Z	start	Start full implementation with P01 and no automatic merges	User authorized the plan and named verification models	docs/plans/full-project-implementation.md	open
+P09	4af125338ea58af720a73bbdb90c6e183287b64b	Link foundation only	Use migration 6 for hashed single-use approval and scoped revocable device credentials; keep screenshot routes absent	Official Meta image-understanding docs establish request shape only; extension possession and crop safety remain unproven	Partial implementation; independent review and image/privacy work outstanding

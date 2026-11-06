@@ -1,3 +1,5 @@
+import {labelAdvice} from '../shared/label-suggestion.js';
+import {fixtureUrl,previewResult,inspectFixture} from './crop.js';
 import {scan,repair,observeRepairs,clearRepairs,runCommand,keyboardCommand} from '../shared/dom.js';
 const existingHost=document.getElementById('clearcheckout-host');
 if(existingHost) existingHost.dispatchEvent(new Event('clearcheckout-close'));
@@ -11,7 +13,37 @@ element('scan').onclick=()=>{const findings=scan(document);announce(`${findings.
 element('repair').onclick=()=>{const result=repair(document);stop();stop=observeRepairs(document);announce(`${result.repaired} labels repaired. ${result.unknown} unknown controls unchanged. Repairs stay active.`);};
 const keyboard=(e:KeyboardEvent)=>{const command=keyboardCommand(e);if(command){e.preventDefault();announce(runCommand(document,command));}};document.addEventListener('keydown',keyboard);
 root.querySelectorAll('[data-command]').forEach(button=>{if(button instanceof HTMLButtonElement)button.onclick=()=>announce(runCommand(document,button.dataset.command ?? ''));});
-const close=()=>{stop();clearRepairs(document);document.removeEventListener('keydown',keyboard);host.remove();if(previousFocus instanceof HTMLElement && previousFocus.isConnected)previousFocus.focus();};element('close').onclick=close;host.addEventListener('clearcheckout-close',close);
+let closed=false;
+const close=()=>{closed=true;stop();clearRepairs(document);document.removeEventListener('keydown',keyboard);host.remove();if(previousFocus instanceof HTMLElement && previousFocus.isConnected)previousFocus.focus();};element('close').onclick=close;host.addEventListener('clearcheckout-close',close);
+if(location.href===fixtureUrl){
+ const capture=document.createElement('button');capture.textContent='Preview synthetic crop locally';
+ const preview=document.createElement('img');preview.alt='Local synthetic control crop. No upload.';preview.hidden=true;
+ const warning=document.createElement('p');warning.textContent='Synthetic fixture only. Preview stays local until you explicitly upload. Suggestions require your review.';
+ const upload=document.createElement('button');upload.textContent='Upload this synthetic crop for a suggestion';upload.hidden=true;
+ const accept=document.createElement('button');accept.textContent='Accept reviewed label';accept.hidden=true;
+ let pending:{nonce:string;target:HTMLButtonElement;markup:string}|undefined;let suggestion='';let owned:HTMLButtonElement|undefined;let ownedText='';
+ const reset=()=>{pending=undefined;suggestion='';upload.hidden=true;accept.hidden=true;preview.hidden=true;preview.removeAttribute('src');};
+ const locationTimer=setInterval(()=>{if(location.href!==fixtureUrl&&(pending||owned)){undo();reset();announce('Page changed. Preview and suggestion cleared.');}},250);
+ const undo=()=>{if(owned?.getAttribute('aria-label')===ownedText)owned.removeAttribute('aria-label');owned=undefined;};
+ const observer=new MutationObserver(()=>{if(pending&&(!inspectFixture()||!pending.target.isConnected||pending.target.outerHTML!==pending.markup||location.href!==fixtureUrl)){reset();announce('Fixture changed. Preview and suggestion cleared.');}});observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,characterData:true});
+ host.addEventListener('clearcheckout-close',()=>{clearInterval(locationTimer);observer.disconnect();undo();reset();});
+ element('close').addEventListener('click',()=>{clearInterval(locationTimer);observer.disconnect();undo();reset();});
+ upload.onclick=async()=>{const value=pending;if(!value||location.href!==fixtureUrl||!inspectFixture())return;upload.hidden=true;try{const advice=labelAdvice.parse(await chrome.runtime.sendMessage({kind:'suggest-fixture',nonce:value.nonce}));if(closed||location.href!==fixtureUrl||!inspectFixture()||pending!==value||!value.target.isConnected||value.target.outerHTML!==value.markup)return;announce('Possible label: '+advice.text+'. Review before accepting.');if(advice.text.toLowerCase()!=='unknown'){suggestion=advice.text;accept.hidden=false;}}catch{if(!closed)announce('Suggestion unavailable. Keep the label unknown.');}};
+ accept.onclick=()=>{const value=pending;if(!value||location.href!==fixtureUrl||!inspectFixture()||!suggestion||!value.target.isConnected||value.target.outerHTML!==value.markup)return;owned=value.target;ownedText=suggestion;pending=undefined;owned.setAttribute('aria-label',ownedText);accept.hidden=true;announce('Reviewed label applied. Close assistance to undo owned labels.');};
+ element('status').after(capture,preview,warning,upload,accept);
+ capture.onclick=async()=>{
+  reset();capture.disabled=true;
+  const nonce=Array.from(crypto.getRandomValues(new Uint8Array(32)),byte=>byte.toString(16).padStart(2,'0')).join('');
+  try{
+   const result=previewResult.safeParse(await chrome.runtime.sendMessage({kind:'crop-preview',nonce}));
+   if(closed)return;
+   if(!result.success||result.data.nonce!==nonce)throw Error('Capture refused.');
+   const target=document.getElementById('fixture-control');if(!(target instanceof HTMLButtonElement))throw Error('Fixture changed.');pending={nonce,target,markup:target.outerHTML};upload.hidden=false;
+   preview.src=result.data.png;preview.hidden=false;announce('Local preview ready. Nothing uploaded.');
+  }catch{if(!closed)announce('Local capture refused. Fixture may be unsafe or changed.');}
+  finally{capture.disabled=false;}
+ };
+}
 element('close').focus();
 const large=element('large');if(!(large instanceof HTMLInputElement))throw new Error('Missing text size input');
 const section=root.querySelector('section');if(!section)throw new Error('Missing panel section');chrome.storage.local.get('large').then(value=>{large.checked=Boolean(value.large);section.style.fontSize=large.checked?'20px':'16px';});large.onchange=()=>{section.style.fontSize=large.checked?'20px':'16px';chrome.storage.local.set({large:large.checked});};

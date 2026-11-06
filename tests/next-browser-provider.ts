@@ -8,6 +8,7 @@ globalThis.fetch=async(input,options)=>{
  const url=String(input);if(!url.startsWith('https://api.meta.ai/v1/'))throw Error('Fixture forbids outbound network');
  appendFileSync(process.env.DB_PATH+'.provider',url+'\n');
  const mode=process.env.CC_TEST_MEDIA_MODE;
+ if(typeof options?.body==='string'&&options.body.includes('input_image')&&options.body.includes('"model":"muse-spark-1.3"')){appendFileSync(process.env.DB_PATH+'.labels',options.body+'\n');return Response.json({status:'completed',usage:{input_tokens:1000,output_tokens:20},output:[{type:'message',role:'assistant',content:[{type:'output_text',text:'Shopping cart'}]}]});}
  if(mode==='http-failure')return new Response('private provider detail',{status:503});
  if(mode==='timeout'){const signal=options?.signal;if(!signal)throw Error('Missing deadline');await new Promise<void>((_resolve,reject)=>{if(signal.aborted)reject(signal.reason);else signal.addEventListener('abort',()=>reject(signal.reason),{once:true});});}
  if(mode==='invalid-image'&&url.includes('images/generations')){const image=Buffer.alloc(24);Buffer.from('89504e470d0a1a0a','hex').copy(image);image.writeUInt32BE(4097,16);image.writeUInt32BE(1,20);return Response.json({data:[{b64_json:image.toString('base64')}]});}
