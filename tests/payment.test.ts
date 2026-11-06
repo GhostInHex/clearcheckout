@@ -131,3 +131,9 @@ test('trusted definitive failure releases the order while retaining provider ide
  const f=await fixture({approve:async a=>evidence(a,'approved'),capture:async a=>evidence(a,'failed'),lookup:async a=>evidence(a,'failed')});
  try{const a=f.service.payments.review(f.user.id,f.order.id,'failed');confirm(f,a);assert.deepEqual((await f.service.payments.approve(f.user.id,a.id)).state,{kind:'failed',providerId:'synthetic-provider'});assert.equal(f.service.payments.review(f.user.id,f.order.id,'after-failure').state.kind,'reviewed');}finally{f.service.db.close();}
 });
+
+test('approval notification preserves callback readiness and callback token cannot capture a different order',async()=>{
+ let captures=0;
+ const f=await fixture({begin:async()=>({providerId:'synthetic-provider',url:'http://127.0.0.1/fixture'}),approve:async a=>evidence(a,'approved'),capture:async a=>{captures++;return evidence(a,'paid');},lookup:async a=>evidence(a,'approved')});
+ try{const p=f.service.payments,a=p.review(f.user.id,f.order.id,'callback');confirm(f,a);await p.begin(f.user.id,a.id);assert.equal((await p.reconcile(f.user.id,a.id)).state.kind,'approving');assert.equal((await p.approve(f.user.id,a.id,'wrong-token')).state.kind,'unknown');assert.equal(captures,0);assert.throws(()=>p.command(f.user.id,a.id,{type:'cancel'}));}finally{f.service.db.close();}
+});

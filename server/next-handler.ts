@@ -1,7 +1,9 @@
 import 'server-only';
+import {sandboxConfiguration} from './paypal.js';
 import {env as runtimeEnvironment} from 'node:process';
+import type {PaymentProvider} from './orders.js';
 import type {MailAdapter} from './auth.js';
-declare global {var clearcheckoutTestMail:MailAdapter|undefined;}
+declare global {var clearcheckoutTestPayment:PaymentProvider|undefined;var clearcheckoutTestMail:MailAdapter|undefined;}
 import {createService,ServiceError} from './service.js';
 import {preferencesSchema,statusErrorSchema,json} from './contracts.js';
 import {checkoutEventSchema} from '../shared/checkout-schema.js';
@@ -21,7 +23,7 @@ export async function handle(request:Request){
  let body:unknown;
  const contentType=request.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
  if(contentType==='application/json'){
-  body=await readJson(request);
+  body=path==='/api/payments/webhook'?(await readBody(request,100000)).toString('utf8'):await readJson(request);
  }
  const peer=request.headers.get('x-cc-client')||'';const signature=request.headers.get('x-cc-client-signature')||'';
  const secret=process.env.CC_TRANSPORT_SECRET;
@@ -30,11 +32,13 @@ export async function handle(request:Request){
  if(signature.length!==expected.length||!timingSafeEqual(Buffer.from(signature),Buffer.from(expected)))throw new ServiceError(503,'Request transport is unavailable.');
  const ip=ipKeyGenerator(peer);
  if(limit(ip,180,60000,headers))return new Response('Too many requests, please try again later.',{status:429,headers:new Headers([...headers,['Content-Type','text/html; charset=utf-8']])});
+ const webhook=path==='/api/payments/webhook'&&method==='POST';
  const origin=request.headers.get('origin');const allowed=[process.env.PUBLIC_ORIGIN,...(process.env.PUBLIC_ORIGINS||'').split(',')].map(value=>value?.trim()).filter(Boolean);
  let verified=true;
  if(origin)try{const parsed=new URL(origin);verified=parsed.origin===origin&&(allowed.length?allowed.includes(origin):parsed.host===request.headers.get('host'));}catch{verified=false;}
- if(!['GET','HEAD'].includes(method)&&(request.headers.get('x-clearcheckout')!=='1'||!verified))return reply({error:'Request origin could not be verified.'},403);
- service??=createService({mail:runtimeEnvironment.NODE_ENV==='test'?globalThis.clearcheckoutTestMail:undefined,appOrigin:process.env.PUBLIC_ORIGIN,dbPath:process.env.DB_PATH||'data/clearcheckout.sqlite',mediaOptions:{dataDir:nodePath.join(nodePath.dirname(process.env.DB_PATH||'data/clearcheckout.sqlite'),'media')}});
+ if(!webhook&&!['GET','HEAD'].includes(method)&&(request.headers.get('x-clearcheckout')!=='1'||!verified))return reply({error:'Request origin could not be verified.'},403);
+ service??=createService({sandbox:sandboxConfiguration(runtimeEnvironment),paymentProvider:runtimeEnvironment.NODE_ENV==='test'?globalThis.clearcheckoutTestPayment:undefined,mail:runtimeEnvironment.NODE_ENV==='test'?globalThis.clearcheckoutTestMail:undefined,appOrigin:process.env.PUBLIC_ORIGIN,dbPath:process.env.DB_PATH||'data/clearcheckout.sqlite',mediaOptions:{dataDir:nodePath.join(nodePath.dirname(process.env.DB_PATH||'data/clearcheckout.sqlite'),'media')}});
+ if(webhook){await service.payments.webhook(request.headers,body);return reply({ok:true});}
  const token=request.headers.get('cookie')?.split(';').map(v=>v.trim()).find(v=>v.startsWith('cc_session='))?.slice(11);
  const user=service.authenticate(token);
  if(method==='POST'&&(path==='/api/signup'||path==='/api/login')){
@@ -53,6 +57,16 @@ export async function handle(request:Request){
  if(path==='/api/account/sessions'&&method==='POST')return reply(service.auth.revoke(user,token,body));
  if(path==='/api/account/export'&&method==='GET')return reply(service.auth.exportAccount(user));
  if(path==='/api/account/delete'&&method==='POST')return reply(await service.auth.deleteAccount(user,body));
+ if(path==='/api/payments/status'&&method==='GET')return reply({configured:service.payments.configured,sandboxOnly:true});
+ if(path==='/api/payments/review'&&method==='POST'){const input=z.object({orderId:z.string(),requestKey:z.string()}).strict().parse(body);return reply(service.payments.review(user.id,input.orderId,input.requestKey));}
+ const paymentPath=/^\/api\/payments\/([^/]+)(?:\/(confirm|begin|capture|reconcile|cancel))?$/.exec(path);
+ if(paymentPath){const id=z.string().parse(paymentPath[1]),operation=paymentPath[2];if(method==='GET'&&!operation)return reply(service.payments.read(user.id,id));if(method==='POST'){
+ if(operation==='confirm')return reply(service.payments.command(user.id,id,z.object({type:z.literal('confirm'),revision:z.number().int().positive(),phrase:z.string().max(80)}).strict().parse(body)));
+ if(operation==='cancel')return reply(service.payments.command(user.id,id,z.object({type:z.literal('cancel')}).strict().parse(body)));
+ if(operation==='begin')return reply(await service.payments.begin(user.id,id));
+ if(operation==='capture'){const callback=z.object({token:z.string()}).strict().parse(body);return reply(await service.payments.approve(user.id,id,callback.token));}
+ if(operation==='reconcile')return reply(await service.payments.reconcile(user.id,id));
+ }}
  if(path==='/api/me'&&method==='GET')return reply(service.publicUser(user));
  if(path==='/api/preferences'&&method==='PUT')return reply(service.setPreferences(user,body));
  if(path==='/api/orders'&&method==='GET')return reply(service.orders(user));

@@ -25,6 +25,11 @@ export const migrations: readonly Migration[] = [
     CREATE TABLE account_mail_limits(key TEXT PRIMARY KEY,next_at INTEGER NOT NULL);
     INSERT INTO schema_migrations VALUES(4,'account-controls',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
   `},
+  {version:5,name:'paypal-sandbox-bookkeeping',sql:`
+    CREATE TABLE paypal_requests(attempt_id TEXT PRIMARY KEY,provider_id TEXT UNIQUE,create_key TEXT NOT NULL UNIQUE,capture_key TEXT NOT NULL UNIQUE,capture_started INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE paypal_webhooks(id TEXT PRIMARY KEY);
+    INSERT INTO schema_migrations VALUES(5,'paypal-sandbox-bookkeeping',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+  `},
 ];
 
 export function migrate(db:Database.Database,steps:readonly Migration[]=migrations):void {
