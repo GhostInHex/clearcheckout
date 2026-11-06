@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/**/*.tsx",
+    "src/**/*.d.ts",
+    "shared/**/*.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "next-env.d.ts",
+    ".next-vercel/types/**/*.ts",
+    "next.config.ts",
+    "scripts/next-start.ts",
+    "tests/next-provider-fixture.ts",
+    "scripts/verify-next-security.ts",
+    "scripts/verify-next-shutdown.ts",
+    "tests/next-browser-provider.ts",
+    "tests/next-fixture.ts",
+    ".next-vercel/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    ".next-vercel/dev"
+  ]
+}

@@ -88,7 +88,7 @@ The demo includes opt-in Muse Voice Transcribe navigation and a reusable Muse Im
 
 ## Hosted submission demo
 
-https://clearcheckout-one.vercel.app is the judge-facing deployment. Vercel serves the static frontend and forwards `/api/*` to this sandbox, so the sandbox must stay running. Signup, saved preferences, repair, review, simulated confirmation, and a live Meta explanation were verified through that URL on 2026-11-04.
+https://clearcheckout-one.vercel.app is the judge-facing frontend. Hosted Next builds require an explicit persistent backend origin and forward `/api/*` before the local API route. The backend must run the matching release with `npm start` and persistent SQLite/media storage. See [hosted deployment and acceptance checks](docs/HOSTED-DEPLOYMENT.md). Historical verification on 2026-11-04 covered the earlier static frontend; it does not establish that the current hosted release works.
 
 The reviewed submission is also available at https://3000-agqyztfyd4yxdgroczmx5ozzdu.instabox.tech while the sandbox runs. Source and extension archives are served at `/clearcheckout-source.zip` and `/clearcheckout-extension.zip`. The Vercel source archive redirects to the GitHub `main` branch archive. The server runs as the user service `clearcheckout-demo`; restart with `systemctl --user restart clearcheckout-demo`. Its runtime enables secure cookies. `PUBLIC_ORIGIN` must match the exact public HTTPS origin when a proxy rewrites Host. `TRUST_PROXY=loopback` trusts only a local reverse proxy; leave it unset for direct local development. A bare local HTTP browser session cannot use the hosted service’s secure cookies.
 

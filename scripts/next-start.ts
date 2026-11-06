@@ -5,6 +5,7 @@ import next from 'next';
 import {createService} from '../server/service.js';
 import path from 'node:path';
 import {writerLock,validateDatabase} from '../server/operations.js';
+if(process.env.VERCEL==='1')throw Error('npm start is the persistent backend launcher; unset VERCEL and build the backend separately');
 const unlock=writerLock(process.env.DB_PATH||'data/clearcheckout.sqlite');
 process.once('exit',unlock);
 const initial=createService({dbPath:process.env.DB_PATH||'data/clearcheckout.sqlite',mediaOptions:{dataDir:path.join(path.dirname(process.env.DB_PATH||'data/clearcheckout.sqlite'),'media')}});initial.db.close();

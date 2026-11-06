@@ -10,3 +10,5 @@ artifacts/
 public/extension/
 public/clearcheckout-extension.zip
 *.tsbuildinfo
+
+.next-vercel/
