@@ -1,0 +1,21 @@
+import {spawnSync,execFileSync} from 'node:child_process';
+import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
+const sha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+const dirty=()=>execFileSync('git',['status','--porcelain'],{encoding:'utf8'});
+const initialDirty=dirty();
+const generatedBaseline='artifacts/program/P09/crop-recovery/probe.png';
+const baseline=readFileSync(generatedBaseline);
+const output=`artifacts/program/P10/keyboard/${sha}`;
+mkdirSync(output,{recursive:true});
+const commands=[['npm','run','verify'],['node_modules/.bin/tsx','tests/p10-memory-browser.ts'],['node_modules/.bin/tsx','tests/p10-installed-adapters-browser.ts'],['node_modules/.bin/tsx','tests/p10-removal-browser.ts'],['node_modules/.bin/tsx','tests/p10-browser.ts'],['node_modules/.bin/tsx','tests/extension-link-browser.ts'],['node_modules/.bin/tsx','tests/extension-crop-browser.ts'],['npm','run','test:controls'],['npm','run','test:paypal-mocked'],['node_modules/.bin/tsx','tests/p10-adversarial-browser.ts']];
+const results=commands.map((command,index)=>{
+ const [file,...args]=command;if(!file)throw Error('Missing verification command');
+ const result=spawnSync(file,args,{encoding:'utf8',env:{PATH:process.env.PATH,HOME:process.env.HOME,CLEARCHECKOUT_SKIP_ENV_FILE:'1',NEXT_TELEMETRY_DISABLED:'1'},maxBuffer:20_000_000});
+ writeFileSync(`${output}/${index}.log`,`${result.stdout??''}${result.stderr??''}${result.error?.message??''}`);
+ console.log(`${index} ${command.join(' ')} ${result.status}`);
+ return {command,code:result.status,signal:result.signal};
+});
+writeFileSync(generatedBaseline,baseline);
+const finalDirty=dirty();
+writeFileSync(`${output}/receipt.json`,JSON.stringify({sha,initialDirty,finalDirty,results,passed:results.every(result=>result.code===0),complete:false,limitations:['No real AT or double-screen-reader claim.','Copied MV3 fixture origin and host permissions only.','Page-owned JavaScript is trusted first-party code. No arbitrary-page authentication or payment capability.','Performance and independent reviews remain separate.','Merchant button memory only. P09 AI-label memory remains disabled.'],priorFailureLogs:['artifacts/program/P10/review/keyboard-failures.log',...Array.from({length:4},(_,i)=>`artifacts/program/P10/review/adversarial-attempt-${i+1}.log`)],video:'artifacts/program/P10/review/keyboard-error-recovery.webm'},null,2));
+process.exitCode=results.every(result=>result.code===0)?0:1;

@@ -1,3 +1,5 @@
+import {parseCommand} from './commands.js';
+import {merchantAdapter} from './merchants.js';
 const selector = 'button, input:not([type=hidden]), select, textarea, a[href], [role=button], [role=slider], [role=checkbox]';
 type Provenance = 'merchant' | 'accessible-name' | 'unknown';
 export interface Control {
@@ -65,7 +67,7 @@ export function registry(root: ParentNode): Control[] {
     if (!id) { id = `local-control-${++sequence}`; identities.set(element,id); }
     const name = nameOf(element);
     const label = name || reliableLabel(element);
-    return {id,element,fingerprint: JSON.stringify([element.localName,element.getAttribute('role'),element.getAttribute('type'),element.getAttribute('data-checkout-label'),name]),label,
+    return {id,element,fingerprint: JSON.stringify([element.localName,element.getAttribute('role'),element.getAttribute('type'),element.getAttribute('data-checkout-label'),name===reliableLabel(element)?'':name]),label,
       provenance: name ? 'accessible-name' : label ? 'merchant' : 'unknown',
       sensitivity: isInput(element) && (element.type === 'password' || /cc-|email|tel/.test(element.autocomplete)) ? 'sensitive' : 'unknown',
       capabilities: element.matches('button,input,select,textarea,a[href]') ? ['focus','native-keyboard'] : ['focus','custom-keyboard-unknown']};
@@ -124,13 +126,38 @@ export function clearRepairs(root: ParentNode) {
     element.removeAttribute('data-clearcheckout-repaired'); ownedLabels.delete(element);
   }
 }
+const navigationHistory=new WeakMap<ParentNode,Array<'cart'|'delivery'|'review'>>();
 export function runCommand(root: ParentNode | null, command: string) {
-  const targets: Record<string,string>={cart:'[data-checkout-cart]',delivery:'[data-checkout-delivery]',review:'[data-checkout-review]'};
-  const target=root?.querySelector(targets[command] || '[data-command-never]');
-  if(!target || !isHtml(target)) return 'That section is not available on this page. No action was taken.';
-  target.focus(); return `Moved to ${command}. Review the details before taking an action.`;
+  const parsed=parseCommand(command);
+  if(parsed.kind==='undo-local-repair' && root){clearRepairs(root);return 'Owned local labels undone. Merchant changes are preserved.';}
+  if(parsed.kind==='read-total'&&root){
+    const totals=root.querySelectorAll('[data-checkout-total]');
+    return totals.length===1?`Unverified DOM total: ${totals[0]?.textContent?.trim()}. Use merchant review to verify.`:'No unique total is available. No action was taken.';
+  }
+  if(parsed.kind==='back'&&root){
+    const history=navigationHistory.get(root)??[];
+    if(history.length<2)return 'No previous guided step. No action was taken.';
+    const destination=history[history.length-2];
+    if(!destination||!merchantAdapter(root).navigate(destination))return 'Previous section unavailable. No action was taken.';
+    history.pop();return `Moved back to ${destination}.`;
+  }
+  if(parsed.kind!=='navigate'||!root)return 'Command unavailable. No action was taken.';
+  if(!merchantAdapter(root).navigate(parsed.destination))return 'That section is not available on this page. No action was taken.';
+  const history=navigationHistory.get(root)??[];
+  if(history[history.length-1]!==parsed.destination)history.push(parsed.destination);
+  navigationHistory.set(root,history);
+  return `Moved to ${parsed.destination}. Review the details before taking an action.`;
 }
 export function keyboardCommand(event: KeyboardEvent) {
   if(!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) return null;
   const keys: Record<string,string>={c:'cart',d:'delivery',r:'review'}; return keys[event.key.toLowerCase()] || null;
+}
+
+export function applyApprovedLabel(control: Control) {
+  const current=registry(control.element.ownerDocument).find(item=>item.element===control.element);
+  if(!current || current.fingerprint!==control.fingerprint || current.sensitivity==='sensitive' || current.provenance!=='merchant' || !current.label || nameOf(current.element)) return false;
+  current.element.setAttribute('aria-label',current.label);
+  current.element.setAttribute('data-clearcheckout-repaired','true');
+  ownedLabels.set(current.element,current.label);
+  return true;
 }
